@@ -13,12 +13,47 @@ class SQLExecutor:
     
     def __init__(self):
         load_dotenv()
+        host = os.getenv("TEST_CLIENT_DB_HOST")
+        db = os.getenv("TEST_CLIENT_DB_NAME")
+        user = os.getenv("TEST_CLIENT_DB_USER")
+        pwd = os.getenv("TEST_CLIENT_DB_PASSWORD")
+        port_env = os.getenv("TEST_CLIENT_DB_PORT")
+
+        # 필수 환경변수 누락 체크
+        missing = [k for k, v in {
+            "TEST_CLIENT_DB_HOST": host,
+            "TEST_CLIENT_DB_NAME": db,
+            "TEST_CLIENT_DB_USER": user,
+            "TEST_CLIENT_DB_PASSWORD": pwd,
+        }.items() if not v]
+
+        # 포트 유효성 검증 및 정규화 (기본값 5432)
+        invalid = []
+        port = 5432
+        if port_env:
+            try:
+                port = int(str(port_env).strip())
+                if port <= 0 or port > 65535:
+                    invalid.append("TEST_CLIENT_DB_PORT")
+                    port = 5432
+            except (ValueError, TypeError):
+                invalid.append("TEST_CLIENT_DB_PORT")
+                port = 5432
+
+        if missing or invalid:
+            parts = []
+            if missing:
+                parts.append(f"누락: {', '.join(missing)}")
+            if invalid:
+                parts.append(f"유효하지 않음: {', '.join(invalid)}")
+            raise ValueError(f"DB 접속 환경 변수 오류 - {'; '.join(parts)}")
+
         self.connection_params = {
-            "host": os.getenv("TEST_CLIENT_DB_HOST"),
-            "port": int(os.getenv("TEST_CLIENT_DB_PORT", 5432)),
-            "database": os.getenv("TEST_CLIENT_DB_NAME"),
-            "user": os.getenv("TEST_CLIENT_DB_USER"),
-            "password": os.getenv("TEST_CLIENT_DB_PASSWORD")
+            "host": host,
+            "port": port,
+            "database": db,
+            "user": user,
+            "password": pwd,
         }
     
     def _has_disallowed_semicolon(self, sql: str) -> bool:
@@ -63,6 +98,14 @@ class SQLExecutor:
         cursor = None
         
         try:
+            # 입력 유효성 검증: None/빈 문자열 방지
+            if not isinstance(sql, str) or not sql.strip():
+                return {
+                    "success": False,
+                    "error": "빈 SQL 입니다.",
+                    "sql": sql,
+                }
+
             # 멀티 스테이트먼트 차단
             if not allow_multi_statements and self._has_disallowed_semicolon(sql):
                 return {
@@ -90,12 +133,13 @@ class SQLExecutor:
             # 2. 쿼리 실행
             cursor.execute(sanitized_sql)
             
-            # 3. SELECT 쿼리인 경우 결과 가져오기
+            # 3. SELECT/RETURNING 결과 처리
             if cursor.description:
                 columns = [desc[0] for desc in cursor.description]
                 rows = cursor.fetchmany(fetch_limit)
                 data = [dict(row) for row in rows]
-                
+                if allow_writes:
+                    conn.commit()
                 return {
                     "success": True,
                     "data": data,
@@ -105,7 +149,8 @@ class SQLExecutor:
                 }
             else:
                 # INSERT/UPDATE/DELETE 등
-                conn.commit()
+                if allow_writes:
+                    conn.commit()
                 return {
                     "success": True,
                     "message": f"{cursor.rowcount} rows affected",
@@ -139,6 +184,10 @@ class SQLExecutor:
             {"valid": True/False, "error": "..."}
         """
         try:
+            # 입력 유효성 검증: None/빈 문자열 방지
+            if not isinstance(sql, str) or not sql.strip():
+                return {"valid": False, "error": "빈 SQL 입니다."}
+
             # 멀티 스테이트먼트 차단
             if self._has_disallowed_semicolon(sql):
                 return {"valid": False, "error": "멀티 스테이트먼트는 허용되지 않습니다."}
@@ -197,7 +246,7 @@ if __name__ == "__main__":
         exec_result = executor.execute_query(sql)
         
         if exec_result["success"]:
-            print(f"\n✅ 실행 성공!")
+            print("\n✅ 실행 성공!")
             print(f"결과: {exec_result.get('data', exec_result.get('message'))}")
         else:
             print(f"\n❌ 실행 실패: {exec_result['error']}")
