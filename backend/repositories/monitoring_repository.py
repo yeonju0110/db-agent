@@ -7,6 +7,8 @@ import uuid
 import os
 from azure.cosmos import CosmosClient, PartitionKey
 from azure.cosmos.exceptions import CosmosResourceNotFoundError
+from azure.core.exceptions import ResourceModifiedError
+from azure.core import MatchConditions
 from dotenv import load_dotenv
 
 from ..models.monitoring import (
@@ -48,7 +50,6 @@ class CosmosDBRepository:
         metric.updated_at = datetime.now(UTC)
         
         item = metric.model_dump()
-        item['_partition_key'] = metric.id
         
         # ISO 형식 변환
         item['created_at'] = metric.created_at.isoformat()
@@ -56,7 +57,7 @@ class CosmosDBRepository:
         if metric.sql_generated_at:  # ← 추가
             item['sql_generated_at'] = metric.sql_generated_at.isoformat()
         
-        self.metrics_container.create_item(body=item)
+        self.metrics_container.create_item(body=item, partition_key=metric.id)
         return metric
     
     def get_metric(self, metric_id: str) -> Optional[MonitoringMetric]:
@@ -112,26 +113,41 @@ class CosmosDBRepository:
     
     def update_metric(self, metric_id: str, metric: MonitoringMetric) -> Optional[MonitoringMetric]:
         """지표 수정"""
-        existing = self.get_metric(metric_id)
-        if not existing:
+        try:
+            # 기존 아이템 조회 (ETag 포함)
+            existing_item = self.metrics_container.read_item(
+                item=metric_id,
+                partition_key=metric_id
+            )
+        except CosmosResourceNotFoundError:
             return None
+        
+        existing = self._item_to_metric(existing_item)
         
         metric.id = metric_id
         metric.created_at = existing.created_at
         metric.updated_at = datetime.now(UTC)
         
-        item = metric.model_dump()
-        item['_partition_key'] = metric_id
+        # None 값 제외하고 모델 덤프
+        item = metric.model_dump(exclude_none=True)
         item['created_at'] = metric.created_at.isoformat()
         item['updated_at'] = metric.updated_at.isoformat()
         if metric.sql_generated_at:
             item['sql_generated_at'] = metric.sql_generated_at.isoformat()
         
-        self.metrics_container.replace_item(
-            item=metric_id,
-            body=item
-        )
-        return metric
+        # ETag를 사용한 동시성 제어와 파티션 키 전달
+        try:
+            self.metrics_container.replace_item(
+                item=metric_id,
+                body=item,
+                partition_key=metric_id,
+                etag=existing_item.get('_etag'),
+                match_condition=MatchConditions.IfNotModified
+            )
+            return metric
+        except ResourceModifiedError:
+            # 동시성 충돌 발생 시 None 반환
+            return None
     
     def delete_metric(self, metric_id: str) -> bool:
         """지표 삭제"""
@@ -152,10 +168,9 @@ class CosmosDBRepository:
         history.executed_at = datetime.now(UTC)
         
         item = history.model_dump()
-        item['_partition_key'] = history.metric_id  # 지표별로 파티션
         item['executed_at'] = history.executed_at.isoformat()
         
-        self.histories_container.create_item(body=item)
+        self.histories_container.create_item(body=item, partition_key=history.metric_id)
         return history
     
     def list_histories(
@@ -192,12 +207,11 @@ class CosmosDBRepository:
         anomaly.detected_at = datetime.now(UTC)
         
         item = anomaly.model_dump()
-        item['_partition_key'] = anomaly.metric_id
         item['detected_at'] = anomaly.detected_at.isoformat()
         if anomaly.resolved_at:
             item['resolved_at'] = anomaly.resolved_at.isoformat()
         
-        self.anomalies_container.create_item(body=item)
+        self.anomalies_container.create_item(body=item, partition_key=anomaly.metric_id)
         return anomaly
     
     def list_anomalies(
