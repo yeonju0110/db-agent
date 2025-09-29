@@ -1,0 +1,187 @@
+{
+  "id": "public.reviews",
+  "object_type": "table",
+  "name": "public.reviews",
+  "table": "public.reviews",
+  "schema": "public",
+  "description": "고객이 구매한 상품에 대해 작성한 리뷰 정보를 저장하는 테이블",
+  "columns": [
+    {
+      "name": "id",
+      "data_type": "int4",
+      "is_nullable": false,
+      "is_primary_key": true,
+      "is_foreign_key": false,
+      "default_value": null,
+      "extra": null,
+      "description": "리뷰 고유 식별자"
+    },
+    {
+      "name": "user_id",
+      "data_type": "int4",
+      "is_nullable": false,
+      "is_primary_key": false,
+      "is_foreign_key": true,
+      "default_value": null,
+      "extra": null,
+      "description": "리뷰 작성자 고객 고유 식별자"
+    },
+    {
+      "name": "product_id",
+      "data_type": "int4",
+      "is_nullable": false,
+      "is_primary_key": false,
+      "is_foreign_key": true,
+      "default_value": null,
+      "extra": null,
+      "description": "리뷰 대상 상품 고유 식별자"
+    },
+    {
+      "name": "order_id",
+      "data_type": "int4",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": true,
+      "default_value": null,
+      "extra": null,
+      "description": "리뷰가 작성된 구매 주문 고유 식별자"
+    },
+    {
+      "name": "rating",
+      "data_type": "int4",
+      "is_nullable": false,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "extra": null,
+      "description": "고객이 부여한 상품 평점 (예: 1~5점)",
+      "is_kpi": true,
+      "kpi_description": "상품에 대한 고객 만족도 평점"
+    },
+    {
+      "name": "title",
+      "data_type": "varchar",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "extra": null,
+      "description": "리뷰 제목"
+    },
+    {
+      "name": "content",
+      "data_type": "text",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "extra": null,
+      "description": "리뷰 상세 내용"
+    },
+    {
+      "name": "is_verified_purchase",
+      "data_type": "bool",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": "false",
+      "extra": null,
+      "description": "해당 리뷰가 실제 구매자에 의해 작성되었는지 여부"
+    },
+    {
+      "name": "helpful_count",
+      "data_type": "int4",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": "0",
+      "extra": null,
+      "description": "다른 고객들이 해당 리뷰를 유용하다고 표시한 횟수",
+      "is_kpi": true,
+      "kpi_description": "고객이 유용하다고 평가한 리뷰 수"
+    },
+    {
+      "name": "status",
+      "data_type": "review_status",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": "'pending'::review_status",
+      "extra": null,
+      "description": "리뷰의 현재 상태(예: 승인, 대기, 거부 등)"
+    },
+    {
+      "name": "created_at",
+      "data_type": "timestamptz",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": "now()",
+      "extra": null,
+      "description": null
+    }
+  ],
+  "primary_key": [
+    "id"
+  ],
+  "foreign_keys": [
+    {
+      "column": "user_id",
+      "referenced_table": "public.users",
+      "referenced_column": "id",
+      "constraint_name": "reviews_user_id_fkey"
+    },
+    {
+      "column": "product_id",
+      "referenced_table": "public.products",
+      "referenced_column": "id",
+      "constraint_name": "reviews_product_id_fkey"
+    },
+    {
+      "column": "order_id",
+      "referenced_table": "public.orders",
+      "referenced_column": "id",
+      "constraint_name": "reviews_order_id_fkey"
+    }
+  ],
+  "indexes": [
+    {
+      "name": "reviews_pkey",
+      "columns": [
+        "id"
+      ],
+      "is_unique": true
+    }
+  ],
+  "sample_queries": [
+    "SELECT * FROM public.reviews LIMIT 10;",
+    "SELECT * FROM public.reviews WHERE id = :id;",
+    "SELECT t.* FROM public.reviews t JOIN public.users r ON t.user_id = r.id LIMIT 10;",
+    "SELECT t.* FROM public.reviews t JOIN public.products r ON t.product_id = r.id LIMIT 10;"
+  ],
+  "business_tags": [
+    "고객리뷰",
+    "상품평가",
+    "고객피드백"
+  ],
+  "embedding": null,
+  "business_purpose": "상품별 고객 피드백 수집 및 분석을 통해 제품 품질 개선과 마케팅 전략 수립에 활용",
+  "common_queries": [
+    "상품별 평균 평점 및 리뷰 개수 조회",
+    "인증 구매 여부가 확인된 리뷰 필터링",
+    "도움이 된 리뷰 순으로 정렬하여 조회"
+  ],
+  "business_terms": {
+    "리뷰": [
+      "Review",
+      "고객평가",
+      "상품후기"
+    ],
+    "인증구매": [
+      "Verified Purchase",
+      "검증구매",
+      "실구매확인"
+    ]
+  },
+  "searchable_text": "테이블: public.reviews\n설명: 고객이 구매한 상품에 대해 작성한 리뷰 정보를 저장하는 테이블\n용도: 상품별 고객 피드백 수집 및 분석을 통해 제품 품질 개선과 마케팅 전략 수립에 활용\n주요 지표 컬럼:\n  - rating(int4): 상품에 대한 고객 만족도 평점\n  - helpful_count(int4): 고객이 유용하다고 평가한 리뷰 수\n전체 컬럼: id, user_id, product_id, order_id, rating, title, content, is_verified_purchase, helpful_count, status, created_at\n자주 분석하는 지표:\n  - 상품별 평균 평점 및 리뷰 개수 조회\n  - 인증 구매 여부가 확인된 리뷰 필터링\n  - 도움이 된 리뷰 순으로 정렬하여 조회\n관련 용어:\n  - 리뷰: Review, 고객평가, 상품후기\n  - 인증구매: Verified Purchase, 검증구매, 실구매확인\n예시 SQL:\n  SELECT * FROM public.reviews LIMIT 10;\n  SELECT * FROM public.reviews WHERE id = :id;\n  SELECT t.* FROM public.reviews t JOIN public.users r ON t.user_id = r.id LIMIT 10;"
+}

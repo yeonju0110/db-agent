@@ -1,0 +1,151 @@
+{
+  "id": "public.user_activities",
+  "object_type": "table",
+  "name": "public.user_activities",
+  "table": "public.user_activities",
+  "schema": "public",
+  "description": "사용자의 웹사이트 내 활동 내역을 기록하는 테이블",
+  "columns": [
+    {
+      "name": "id",
+      "data_type": "int4",
+      "is_nullable": false,
+      "is_primary_key": true,
+      "is_foreign_key": false,
+      "default_value": null,
+      "extra": null,
+      "description": "각 활동 기록의 고유 식별자"
+    },
+    {
+      "name": "user_id",
+      "data_type": "int4",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": true,
+      "default_value": null,
+      "extra": null,
+      "description": "활동을 수행한 사용자 고유 ID"
+    },
+    {
+      "name": "activity_type",
+      "data_type": "activity_type",
+      "is_nullable": false,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "extra": null,
+      "description": "사용자가 수행한 활동의 유형 (예: 조회, 구매, 장바구니 추가)",
+      "is_kpi": true,
+      "kpi_description": "사용자 활동 유형별 참여도 지표"
+    },
+    {
+      "name": "product_id",
+      "data_type": "int4",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": true,
+      "default_value": null,
+      "extra": null,
+      "description": "활동과 연관된 제품의 고유 ID",
+      "is_kpi": true,
+      "kpi_description": "제품별 사용자 관심도 및 참여도"
+    },
+    {
+      "name": "session_id",
+      "data_type": "varchar",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "extra": null,
+      "description": "사용자 접속 세션을 구분하는 식별자"
+    },
+    {
+      "name": "ip_address",
+      "data_type": "varchar",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "extra": null,
+      "description": "사용자 접속 시의 IP 주소"
+    },
+    {
+      "name": "user_agent",
+      "data_type": "text",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "extra": null,
+      "description": "사용자가 접속한 기기 및 브라우저 정보"
+    },
+    {
+      "name": "created_at",
+      "data_type": "timestamptz",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": "now()",
+      "extra": null,
+      "description": "활동이 발생한 시점의 타임스탬프"
+    }
+  ],
+  "primary_key": [
+    "id"
+  ],
+  "foreign_keys": [
+    {
+      "column": "user_id",
+      "referenced_table": "public.users",
+      "referenced_column": "id",
+      "constraint_name": "user_activities_user_id_fkey"
+    },
+    {
+      "column": "product_id",
+      "referenced_table": "public.products",
+      "referenced_column": "id",
+      "constraint_name": "user_activities_product_id_fkey"
+    }
+  ],
+  "indexes": [
+    {
+      "name": "user_activities_pkey",
+      "columns": [
+        "id"
+      ],
+      "is_unique": true
+    }
+  ],
+  "sample_queries": [
+    "SELECT * FROM public.user_activities LIMIT 10;",
+    "SELECT * FROM public.user_activities WHERE id = :id;",
+    "SELECT t.* FROM public.user_activities t JOIN public.users r ON t.user_id = r.id LIMIT 10;",
+    "SELECT t.* FROM public.user_activities t JOIN public.products r ON t.product_id = r.id LIMIT 10;"
+  ],
+  "business_tags": [
+    "사용자행동",
+    "웹로그",
+    "이커머스"
+  ],
+  "embedding": null,
+  "business_purpose": "사용자 행동 분석 및 개인화, 마케팅 전략 수립을 위한 활동 데이터 저장",
+  "common_queries": [
+    "특정 기간 내 사용자별 활동 유형별 빈도 분석",
+    "제품별 사용자 활동 추적 및 인기 제품 파악",
+    "세션별 사용자 행동 흐름 분석"
+  ],
+  "business_terms": {
+    "사용자활동": [
+      "User Activity",
+      "행동로그",
+      "사용자행동기록"
+    ],
+    "세션": [
+      "Session",
+      "접속세션",
+      "사용자세션"
+    ]
+  },
+  "searchable_text": "테이블: public.user_activities\n설명: 사용자의 웹사이트 내 활동 내역을 기록하는 테이블\n용도: 사용자 행동 분석 및 개인화, 마케팅 전략 수립을 위한 활동 데이터 저장\n주요 지표 컬럼:\n  - activity_type(activity_type): 사용자 활동 유형별 참여도 지표\n  - product_id(int4): 제품별 사용자 관심도 및 참여도\n전체 컬럼: id, user_id, activity_type, product_id, session_id, ip_address, user_agent, created_at\n자주 분석하는 지표:\n  - 특정 기간 내 사용자별 활동 유형별 빈도 분석\n  - 제품별 사용자 활동 추적 및 인기 제품 파악\n  - 세션별 사용자 행동 흐름 분석\n관련 용어:\n  - 사용자활동: User Activity, 행동로그, 사용자행동기록\n  - 세션: Session, 접속세션, 사용자세션\n예시 SQL:\n  SELECT * FROM public.user_activities LIMIT 10;\n  SELECT * FROM public.user_activities WHERE id = :id;\n  SELECT t.* FROM public.user_activities t JOIN public.users r ON t.user_id = r.id LIMIT 10;"
+}

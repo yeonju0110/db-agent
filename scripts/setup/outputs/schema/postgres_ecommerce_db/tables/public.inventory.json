@@ -1,0 +1,143 @@
+{
+  "id": "public.inventory",
+  "object_type": "table",
+  "name": "public.inventory",
+  "table": "public.inventory",
+  "schema": "public",
+  "description": "제품별 재고 현황과 창고 위치 정보를 관리하는 테이블",
+  "columns": [
+    {
+      "name": "id",
+      "data_type": "int4",
+      "is_nullable": false,
+      "is_primary_key": true,
+      "is_foreign_key": false,
+      "default_value": null,
+      "extra": null,
+      "description": "재고 항목 고유 식별자"
+    },
+    {
+      "name": "product_id",
+      "data_type": "int4",
+      "is_nullable": false,
+      "is_primary_key": false,
+      "is_foreign_key": true,
+      "default_value": null,
+      "extra": null,
+      "description": "재고가 관리되는 제품의 고유 식별자"
+    },
+    {
+      "name": "quantity",
+      "data_type": "int4",
+      "is_nullable": false,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": "0",
+      "extra": null,
+      "description": "창고에 실제로 보유 중인 재고 수량",
+      "is_kpi": true,
+      "kpi_description": "현재 사용 가능한 재고 수량"
+    },
+    {
+      "name": "reserved_quantity",
+      "data_type": "int4",
+      "is_nullable": false,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": "0",
+      "extra": null,
+      "description": "이미 주문 등으로 예약되어 출고 대기 중인 재고 수량",
+      "is_kpi": true,
+      "kpi_description": "주문 등으로 예약된 재고 수량"
+    },
+    {
+      "name": "reorder_level",
+      "data_type": "int4",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": "10",
+      "extra": null,
+      "description": "재고가 이 수량 이하로 떨어지면 재주문이 필요함을 나타내는 기준값",
+      "is_kpi": true,
+      "kpi_description": "재고 보충이 필요한 최소 수량 기준"
+    },
+    {
+      "name": "warehouse_location",
+      "data_type": "varchar",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "extra": null,
+      "description": "재고가 저장된 창고 또는 위치 정보"
+    },
+    {
+      "name": "last_updated",
+      "data_type": "timestamptz",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": "now()",
+      "extra": null,
+      "description": "재고 정보가 마지막으로 갱신된 시점"
+    }
+  ],
+  "primary_key": [
+    "id"
+  ],
+  "foreign_keys": [
+    {
+      "column": "product_id",
+      "referenced_table": "public.products",
+      "referenced_column": "id",
+      "constraint_name": "inventory_product_id_fkey"
+    }
+  ],
+  "indexes": [
+    {
+      "name": "inventory_pkey",
+      "columns": [
+        "id"
+      ],
+      "is_unique": true
+    }
+  ],
+  "sample_queries": [
+    "SELECT * FROM public.inventory LIMIT 10;",
+    "SELECT * FROM public.inventory WHERE id = :id;",
+    "SELECT t.* FROM public.inventory t JOIN public.products r ON t.product_id = r.id LIMIT 10;"
+  ],
+  "business_tags": [
+    "재고관리",
+    "물류",
+    "제품정보"
+  ],
+  "embedding": null,
+  "business_purpose": "재고 수량 파악, 예약된 재고 관리, 재주문 시점 판단을 위한 데이터 제공",
+  "common_queries": [
+    "현재 재고 수량 및 예약 수량 확인",
+    "재주문 필요 제품 목록 조회",
+    "창고별 재고 분포 현황 분석"
+  ],
+  "business_terms": {
+    "재고수량": [
+      "Quantity",
+      "Stock Level",
+      "Inventory Count"
+    ],
+    "예약재고": [
+      "Reserved Quantity",
+      "Allocated Stock"
+    ],
+    "재주문수준": [
+      "Reorder Level",
+      "Restock Threshold"
+    ],
+    "창고위치": [
+      "Warehouse Location",
+      "Storage Location"
+    ]
+  },
+  "searchable_text": "테이블: public.inventory\n설명: 제품별 재고 현황과 창고 위치 정보를 관리하는 테이블\n용도: 재고 수량 파악, 예약된 재고 관리, 재주문 시점 판단을 위한 데이터 제공\n주요 지표 컬럼:\n  - quantity(int4): 현재 사용 가능한 재고 수량\n  - reserved_quantity(int4): 주문 등으로 예약된 재고 수량\n  - reorder_level(int4): 재고 보충이 필요한 최소 수량 기준\n전체 컬럼: id, product_id, quantity, reserved_quantity, reorder_level, warehouse_location, last_updated\n자주 분석하는 지표:\n  - 현재 재고 수량 및 예약 수량 확인\n  - 재주문 필요 제품 목록 조회\n  - 창고별 재고 분포 현황 분석\n관련 용어:\n  - 재고수량: Quantity, Stock Level, Inventory Count\n  - 예약재고: Reserved Quantity, Allocated Stock\n  - 재주문수준: Reorder Level, Restock Threshold\n  - 창고위치: Warehouse Location, Storage Location\n예시 SQL:\n  SELECT * FROM public.inventory LIMIT 10;\n  SELECT * FROM public.inventory WHERE id = :id;\n  SELECT t.* FROM public.inventory t JOIN public.products r ON t.product_id = r.id LIMIT 10;"
+}

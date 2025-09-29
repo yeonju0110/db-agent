@@ -1,0 +1,193 @@
+{
+  "id": "public.products",
+  "object_type": "table",
+  "name": "public.products",
+  "table": "public.products",
+  "schema": "public",
+  "description": "온라인 쇼핑몰에서 판매되는 상품들의 상세 정보를 저장하는 테이블",
+  "columns": [
+    {
+      "name": "id",
+      "data_type": "int4",
+      "is_nullable": false,
+      "is_primary_key": true,
+      "is_foreign_key": false,
+      "default_value": null,
+      "extra": null,
+      "description": "상품을 고유하게 식별하는 식별자"
+    },
+    {
+      "name": "category_id",
+      "data_type": "int4",
+      "is_nullable": false,
+      "is_primary_key": false,
+      "is_foreign_key": true,
+      "default_value": null,
+      "extra": null,
+      "description": "상품이 속한 카테고리의 식별자"
+    },
+    {
+      "name": "name",
+      "data_type": "varchar",
+      "is_nullable": false,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "extra": null,
+      "description": "상품명"
+    },
+    {
+      "name": "description",
+      "data_type": "text",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "extra": null,
+      "description": "상품에 대한 상세 설명"
+    },
+    {
+      "name": "price",
+      "data_type": "numeric",
+      "is_nullable": false,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "extra": null,
+      "description": "고객에게 판매되는 가격",
+      "is_kpi": true,
+      "kpi_description": "상품 판매 가격으로 매출 예측 및 가격 정책 수립에 활용"
+    },
+    {
+      "name": "cost",
+      "data_type": "numeric",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "extra": null,
+      "description": "상품의 원가",
+      "is_kpi": true,
+      "kpi_description": "상품 원가로 이익률 계산 및 가격 결정에 활용"
+    },
+    {
+      "name": "brand",
+      "data_type": "varchar",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "extra": null,
+      "description": "상품 제조사 또는 브랜드명"
+    },
+    {
+      "name": "model",
+      "data_type": "varchar",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "extra": null,
+      "description": "상품 모델명 또는 번호"
+    },
+    {
+      "name": "status",
+      "data_type": "product_status",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": "'active'::product_status",
+      "extra": null,
+      "description": "상품의 현재 판매 상태(예: 판매중, 품절)"
+    },
+    {
+      "name": "weight",
+      "data_type": "numeric",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "extra": null,
+      "description": "상품의 무게"
+    },
+    {
+      "name": "dimensions",
+      "data_type": "varchar",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "extra": null,
+      "description": null
+    },
+    {
+      "name": "created_at",
+      "data_type": "timestamptz",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": "now()",
+      "extra": null,
+      "description": null
+    },
+    {
+      "name": "updated_at",
+      "data_type": "timestamptz",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": "now()",
+      "extra": null,
+      "description": null
+    }
+  ],
+  "primary_key": [
+    "id"
+  ],
+  "foreign_keys": [
+    {
+      "column": "category_id",
+      "referenced_table": "public.categories",
+      "referenced_column": "id",
+      "constraint_name": "products_category_id_fkey"
+    }
+  ],
+  "indexes": [
+    {
+      "name": "products_pkey",
+      "columns": [
+        "id"
+      ],
+      "is_unique": true
+    }
+  ],
+  "sample_queries": [
+    "SELECT * FROM public.products LIMIT 10;",
+    "SELECT * FROM public.products WHERE id = :id;",
+    "SELECT t.* FROM public.products t JOIN public.categories r ON t.category_id = r.id LIMIT 10;"
+  ],
+  "business_tags": [
+    "상품관리",
+    "가격정보",
+    "재고관리"
+  ],
+  "embedding": null,
+  "business_purpose": "상품 관리, 가격 설정, 재고 및 마케팅 전략 수립을 위한 기본 데이터 제공",
+  "common_queries": [
+    "카테고리별 상품 목록 조회 및 가격 비교",
+    "브랜드별 인기 상품 분석",
+    "상품 상태별(판매중, 품절 등) 재고 현황 확인"
+  ],
+  "business_terms": {
+    "상품": [
+      "Product",
+      "Item",
+      "Goods"
+    ],
+    "브랜드": [
+      "Brand",
+      "Manufacturer"
+    ]
+  },
+  "searchable_text": "테이블: public.products\n설명: 온라인 쇼핑몰에서 판매되는 상품들의 상세 정보를 저장하는 테이블\n용도: 상품 관리, 가격 설정, 재고 및 마케팅 전략 수립을 위한 기본 데이터 제공\n주요 지표 컬럼:\n  - price(numeric): 상품 판매 가격으로 매출 예측 및 가격 정책 수립에 활용\n  - cost(numeric): 상품 원가로 이익률 계산 및 가격 결정에 활용\n전체 컬럼: id, category_id, name, description, price, cost, brand, model, status, weight, dimensions, created_at, updated_at\n자주 분석하는 지표:\n  - 카테고리별 상품 목록 조회 및 가격 비교\n  - 브랜드별 인기 상품 분석\n  - 상품 상태별(판매중, 품절 등) 재고 현황 확인\n관련 용어:\n  - 상품: Product, Item, Goods\n  - 브랜드: Brand, Manufacturer\n예시 SQL:\n  SELECT * FROM public.products LIMIT 10;\n  SELECT * FROM public.products WHERE id = :id;\n  SELECT t.* FROM public.products t JOIN public.categories r ON t.category_id = r.id LIMIT 10;"
+}

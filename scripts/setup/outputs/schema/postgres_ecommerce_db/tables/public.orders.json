@@ -1,0 +1,230 @@
+{
+  "id": "public.orders",
+  "object_type": "table",
+  "name": "public.orders",
+  "table": "public.orders",
+  "schema": "public",
+  "description": "고객이 이커머스 플랫폼에서 생성한 주문 정보를 저장하는 테이블",
+  "columns": [
+    {
+      "name": "id",
+      "data_type": "int4",
+      "is_nullable": false,
+      "is_primary_key": true,
+      "is_foreign_key": false,
+      "default_value": null,
+      "extra": null,
+      "description": "주문 고유 식별자"
+    },
+    {
+      "name": "user_id",
+      "data_type": "int4",
+      "is_nullable": false,
+      "is_primary_key": false,
+      "is_foreign_key": true,
+      "default_value": null,
+      "extra": null,
+      "description": "주문을 생성한 고객의 고유 식별자"
+    },
+    {
+      "name": "order_number",
+      "data_type": "varchar",
+      "is_nullable": false,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "extra": null,
+      "description": "고객에게 부여된 주문 번호"
+    },
+    {
+      "name": "status",
+      "data_type": "order_status",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": "'pending'::order_status",
+      "extra": null,
+      "description": "주문의 현재 처리 상태 (예: 결제완료, 배송중, 취소 등)",
+      "is_kpi": true,
+      "kpi_description": "주문 처리 상태에 따른 진행 현황"
+    },
+    {
+      "name": "total_amount",
+      "data_type": "numeric",
+      "is_nullable": false,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "extra": null,
+      "description": "주문에 포함된 상품들의 총 결제 금액",
+      "is_kpi": true,
+      "kpi_description": "주문별 총 매출액"
+    },
+    {
+      "name": "discount_amount",
+      "data_type": "numeric",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": "0",
+      "extra": null,
+      "description": "주문에 적용된 할인 금액",
+      "is_kpi": true,
+      "kpi_description": "주문별 할인 금액"
+    },
+    {
+      "name": "shipping_fee",
+      "data_type": "numeric",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": "0",
+      "extra": null,
+      "description": "배송비용"
+    },
+    {
+      "name": "tax_amount",
+      "data_type": "numeric",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": "0",
+      "extra": null,
+      "description": "주문에 부과된 세금 금액"
+    },
+    {
+      "name": "payment_method",
+      "data_type": "payment_method_type",
+      "is_nullable": false,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "extra": null,
+      "description": "주문 결제에 사용된 결제 수단"
+    },
+    {
+      "name": "shipping_address_id",
+      "data_type": "int4",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": true,
+      "default_value": null,
+      "extra": null,
+      "description": "배송지 주소 식별자"
+    },
+    {
+      "name": "order_date",
+      "data_type": "timestamptz",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": "now()",
+      "extra": null,
+      "description": null
+    },
+    {
+      "name": "shipped_at",
+      "data_type": "timestamptz",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "extra": null,
+      "description": null
+    },
+    {
+      "name": "delivered_at",
+      "data_type": "timestamptz",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "extra": null,
+      "description": null
+    },
+    {
+      "name": "notes",
+      "data_type": "text",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "extra": null,
+      "description": null
+    }
+  ],
+  "primary_key": [
+    "id"
+  ],
+  "foreign_keys": [
+    {
+      "column": "user_id",
+      "referenced_table": "public.users",
+      "referenced_column": "id",
+      "constraint_name": "orders_user_id_fkey"
+    },
+    {
+      "column": "shipping_address_id",
+      "referenced_table": "public.user_addresses",
+      "referenced_column": "id",
+      "constraint_name": "orders_shipping_address_id_fkey"
+    }
+  ],
+  "indexes": [
+    {
+      "name": "orders_order_number_key",
+      "columns": [
+        "order_number"
+      ],
+      "is_unique": true
+    },
+    {
+      "name": "orders_pkey",
+      "columns": [
+        "id"
+      ],
+      "is_unique": true
+    }
+  ],
+  "sample_queries": [
+    "SELECT * FROM public.orders LIMIT 10;",
+    "SELECT * FROM public.orders WHERE id = :id;",
+    "SELECT t.* FROM public.orders t JOIN public.users r ON t.user_id = r.id LIMIT 10;",
+    "SELECT t.* FROM public.orders t JOIN public.user_addresses r ON t.shipping_address_id = r.id LIMIT 10;"
+  ],
+  "business_tags": [
+    "주문관리",
+    "매출분석",
+    "고객거래"
+  ],
+  "embedding": null,
+  "business_purpose": "주문 내역 관리, 매출 분석, 배송 및 결제 처리에 활용",
+  "common_queries": [
+    "월별 총 주문 건수 및 매출액 조회",
+    "주문 상태별 주문 현황 파악",
+    "결제 수단별 매출 비중 분석"
+  ],
+  "business_terms": {
+    "주문번호": [
+      "Order Number",
+      "주문ID",
+      "주문번호"
+    ],
+    "주문상태": [
+      "Order Status",
+      "주문진행상태",
+      "주문상태"
+    ],
+    "결제수단": [
+      "Payment Method",
+      "결제방식",
+      "결제수단"
+    ],
+    "총금액": [
+      "Total Amount",
+      "주문총액",
+      "총주문금액"
+    ]
+  },
+  "searchable_text": "테이블: public.orders\n설명: 고객이 이커머스 플랫폼에서 생성한 주문 정보를 저장하는 테이블\n용도: 주문 내역 관리, 매출 분석, 배송 및 결제 처리에 활용\n주요 지표 컬럼:\n  - status(order_status): 주문 처리 상태에 따른 진행 현황\n  - total_amount(numeric): 주문별 총 매출액\n  - discount_amount(numeric): 주문별 할인 금액\n전체 컬럼: id, user_id, order_number, status, total_amount, discount_amount, shipping_fee, tax_amount, payment_method, shipping_address_id, order_date, shipped_at, delivered_at, notes\n자주 분석하는 지표:\n  - 월별 총 주문 건수 및 매출액 조회\n  - 주문 상태별 주문 현황 파악\n  - 결제 수단별 매출 비중 분석\n관련 용어:\n  - 주문번호: Order Number, 주문ID, 주문번호\n  - 주문상태: Order Status, 주문진행상태, 주문상태\n  - 결제수단: Payment Method, 결제방식, 결제수단\n  - 총금액: Total Amount, 주문총액, 총주문금액\n예시 SQL:\n  SELECT * FROM public.orders LIMIT 10;\n  SELECT * FROM public.orders WHERE id = :id;\n  SELECT t.* FROM public.orders t JOIN public.users r ON t.user_id = r.id LIMIT 10;"
+}

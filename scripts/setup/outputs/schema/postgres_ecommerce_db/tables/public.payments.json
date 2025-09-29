@@ -1,0 +1,164 @@
+{
+  "id": "public.payments",
+  "object_type": "table",
+  "name": "public.payments",
+  "table": "public.payments",
+  "schema": "public",
+  "description": "고객 주문에 대한 결제 내역을 기록하는 테이블",
+  "columns": [
+    {
+      "name": "id",
+      "data_type": "int4",
+      "is_nullable": false,
+      "is_primary_key": true,
+      "is_foreign_key": false,
+      "default_value": null,
+      "extra": null,
+      "description": "결제 건을 고유하게 식별하는 식별자"
+    },
+    {
+      "name": "order_id",
+      "data_type": "int4",
+      "is_nullable": false,
+      "is_primary_key": false,
+      "is_foreign_key": true,
+      "default_value": null,
+      "extra": null,
+      "description": "결제가 연결된 주문의 고유 식별자"
+    },
+    {
+      "name": "payment_method",
+      "data_type": "payment_method_type",
+      "is_nullable": false,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "extra": null,
+      "description": "고객이 선택한 결제 수단 유형"
+    },
+    {
+      "name": "amount",
+      "data_type": "numeric",
+      "is_nullable": false,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "extra": null,
+      "description": "해당 결제 건의 결제 금액",
+      "is_kpi": true,
+      "kpi_description": "총 결제 금액"
+    },
+    {
+      "name": "status",
+      "data_type": "payment_status",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": "'pending'::payment_status",
+      "extra": null,
+      "description": "결제 진행 상태 (예: 완료, 실패, 취소 등)",
+      "is_kpi": true,
+      "kpi_description": "결제 성공률 및 실패율"
+    },
+    {
+      "name": "transaction_id",
+      "data_type": "varchar",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "extra": null,
+      "description": "결제 게이트웨이에서 발급한 거래 고유 번호"
+    },
+    {
+      "name": "gateway",
+      "data_type": "varchar",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "extra": null,
+      "description": "결제 처리에 사용된 결제 대행사 또는 시스템 명칭"
+    },
+    {
+      "name": "paid_at",
+      "data_type": "timestamptz",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "extra": null,
+      "description": "실제 결제가 완료된 시각"
+    },
+    {
+      "name": "created_at",
+      "data_type": "timestamptz",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": "now()",
+      "extra": null,
+      "description": "결제 정보가 시스템에 기록된 시각"
+    }
+  ],
+  "primary_key": [
+    "id"
+  ],
+  "foreign_keys": [
+    {
+      "column": "order_id",
+      "referenced_table": "public.orders",
+      "referenced_column": "id",
+      "constraint_name": "payments_order_id_fkey"
+    }
+  ],
+  "indexes": [
+    {
+      "name": "payments_pkey",
+      "columns": [
+        "id"
+      ],
+      "is_unique": true
+    }
+  ],
+  "sample_queries": [
+    "SELECT * FROM public.payments LIMIT 10;",
+    "SELECT * FROM public.payments WHERE id = :id;",
+    "SELECT t.* FROM public.payments t JOIN public.orders r ON t.order_id = r.id LIMIT 10;"
+  ],
+  "business_tags": [
+    "결제",
+    "주문관리",
+    "매출분석"
+  ],
+  "embedding": null,
+  "business_purpose": "주문별 결제 정보 관리 및 결제 상태 추적, 결제 수단별 매출 분석에 활용",
+  "common_queries": [
+    "특정 기간 내 결제 완료된 총 결제 금액 조회",
+    "결제 수단별 매출 비중 분석",
+    "결제 실패 또는 취소된 건수 및 원인 파악"
+  ],
+  "business_terms": {
+    "결제수단": [
+      "payment_method",
+      "결제방식",
+      "지불수단"
+    ],
+    "결제상태": [
+      "payment_status",
+      "결제진행상태",
+      "지불상태"
+    ],
+    "결제금액": [
+      "amount",
+      "결제액",
+      "지불금액"
+    ],
+    "거래ID": [
+      "transaction_id",
+      "트랜잭션번호",
+      "거래번호"
+    ]
+  },
+  "searchable_text": "테이블: public.payments\n설명: 고객 주문에 대한 결제 내역을 기록하는 테이블\n용도: 주문별 결제 정보 관리 및 결제 상태 추적, 결제 수단별 매출 분석에 활용\n주요 지표 컬럼:\n  - amount(numeric): 총 결제 금액\n  - status(payment_status): 결제 성공률 및 실패율\n전체 컬럼: id, order_id, payment_method, amount, status, transaction_id, gateway, paid_at, created_at\n자주 분석하는 지표:\n  - 특정 기간 내 결제 완료된 총 결제 금액 조회\n  - 결제 수단별 매출 비중 분석\n  - 결제 실패 또는 취소된 건수 및 원인 파악\n관련 용어:\n  - 결제수단: payment_method, 결제방식, 지불수단\n  - 결제상태: payment_status, 결제진행상태, 지불상태\n  - 결제금액: amount, 결제액, 지불금액\n  - 거래ID: transaction_id, 트랜잭션번호, 거래번호\n예시 SQL:\n  SELECT * FROM public.payments LIMIT 10;\n  SELECT * FROM public.payments WHERE id = :id;\n  SELECT t.* FROM public.payments t JOIN public.orders r ON t.order_id = r.id LIMIT 10;"
+}
