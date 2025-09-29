@@ -32,6 +32,14 @@ class CosmosDBRepository:
         key = os.getenv("COSMOS_KEY")
         database_name = os.getenv("COSMOS_DATABASE", "db-monitoring")
         
+        # 필수 환경변수 검증
+        if not endpoint or not key:
+            missing = [k for k, v in {"COSMOS_ENDPOINT": endpoint, "COSMOS_KEY": key}.items() if not v]
+            raise RuntimeError(
+                f"필수 환경변수가 설정되지 않았습니다: {', '.join(missing)}\n"
+                "README의 환경변수 설정 단계를 먼저 수행하거나 배포 환경변수를 확인하세요."
+            )
+        
         self.client = CosmosClient(endpoint, key)
         self.database = self.client.get_database_client(database_name)
         
@@ -57,7 +65,7 @@ class CosmosDBRepository:
         if metric.sql_generated_at:  # ← 추가
             item['sql_generated_at'] = metric.sql_generated_at.isoformat()
         
-        self.metrics_container.create_item(body=item, partition_key=metric.id)
+        self.metrics_container.create_item(body=item)
         return metric
     
     def get_metric(self, metric_id: str) -> Optional[MonitoringMetric]:
@@ -140,7 +148,6 @@ class CosmosDBRepository:
             self.metrics_container.replace_item(
                 item=metric_id,
                 body=item,
-                partition_key=metric_id,
                 etag=existing_item.get('_etag'),
                 match_condition=MatchConditions.IfNotModified
             )
@@ -170,7 +177,7 @@ class CosmosDBRepository:
         item = history.model_dump()
         item['executed_at'] = history.executed_at.isoformat()
         
-        self.histories_container.create_item(body=item, partition_key=history.metric_id)
+        self.histories_container.create_item(body=item)
         return history
     
     def list_histories(
@@ -211,7 +218,7 @@ class CosmosDBRepository:
         if anomaly.resolved_at:
             item['resolved_at'] = anomaly.resolved_at.isoformat()
         
-        self.anomalies_container.create_item(body=item, partition_key=anomaly.metric_id)
+        self.anomalies_container.create_item(body=item)
         return anomaly
     
     def list_anomalies(
@@ -251,7 +258,6 @@ class CosmosDBRepository:
         connection.created_at = datetime.now(UTC)
         
         item = connection.model_dump()
-        item['_partition_key'] = connection.id
         item['created_at'] = connection.created_at.isoformat()
         if connection.last_tested_at:
             item['last_tested_at'] = connection.last_tested_at.isoformat()

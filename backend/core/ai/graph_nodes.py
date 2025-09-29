@@ -4,7 +4,9 @@ LangGraph 노드 정의
 from typing import Dict, Any
 from decimal import Decimal
 import sys
+import logging
 from pathlib import Path
+from openai import OpenAIError, APIError, APITimeoutError, RateLimitError
 
 # 프로젝트 루트를 sys.path에 추가
 project_root = Path(__file__).parent.parent.parent.parent
@@ -41,6 +43,7 @@ class GraphNodes:
         self.generator = SQLGenerator()
         self.executor = SQLExecutor()
         self.repository = get_repository()
+        self.logger = logging.getLogger(__name__)
     
     # ===== 기존 노드들 (동일) =====
     
@@ -101,7 +104,8 @@ class GraphNodes:
                 model=self.generator.chat_deployment,
                 messages=messages,
                 temperature=0.0,
-                max_tokens=500
+                max_tokens=500,
+                timeout=30.0  # 30초 타임아웃
             )
             
             sql = response.choices[0].message.content.strip()
@@ -119,8 +123,31 @@ class GraphNodes:
             
             return {"generated_sql": sql}
             
+        except APITimeoutError as e:
+            error_msg = f"SQL 생성 타임아웃 (30초 초과): {str(e)}"
+            self.logger.error(error_msg)
+            return {"error": error_msg}
+            
+        except RateLimitError as e:
+            error_msg = f"API 호출 한도 초과: {str(e)}"
+            self.logger.error(error_msg)
+            return {"error": error_msg}
+            
+        except APIError as e:
+            error_msg = f"OpenAI API 오류: {str(e)}"
+            self.logger.error(error_msg)
+            return {"error": error_msg}
+            
+        except OpenAIError as e:
+            error_msg = f"OpenAI 클라이언트 오류: {str(e)}"
+            self.logger.error(error_msg)
+            return {"error": error_msg}
+            
         except Exception as e:
-            return {"error": f"SQL 생성 실패: {str(e)}"}
+            # 예상하지 못한 예외는 로깅 후 재발생
+            error_msg = f"예상치 못한 SQL 생성 오류: {str(e)}"
+            self.logger.exception(error_msg)  # 스택 트레이스 포함
+            raise  # 예상치 못한 예외는 상위로 전파
     
     
     def validate_sql_node(self, state: AgentState) -> Dict[str, Any]:
@@ -266,10 +293,33 @@ class GraphNodes:
             print(f"  ⚠ 결과 값 없음")
             return {"anomaly_detected": False}
         
-        # 임계값 비교 (기존 로직)
-        operator = threshold_config['operator']
-        threshold = threshold_config['value']
-        actual = float(history.result_value)
+        # 임계값 설정 검증
+        operator = threshold_config.get('operator')
+        threshold_value = threshold_config.get('value')
+        
+        if operator is None or threshold_value is None:
+            print("  ⚠ 임계값 설정 불완전(operator/value 누락)")
+            return {"anomaly_detected": False}
+        
+        # operator 유효성 검증
+        valid_operators = ['>', '>=', '<', '<=', '==', '!=']
+        if operator not in valid_operators:
+            print(f"  ⚠ 유효하지 않은 연산자: {operator}")
+            return {"anomaly_detected": False}
+        
+        # threshold 값을 float로 안전하게 변환
+        try:
+            threshold = float(threshold_value)
+        except (ValueError, TypeError) as e:
+            print(f"  ⚠ 임계값을 숫자로 변환 실패: {threshold_value} ({e})")
+            return {"anomaly_detected": False}
+        
+        # 실제 값도 float로 안전하게 변환
+        try:
+            actual = float(history.result_value)
+        except (ValueError, TypeError) as e:
+            print(f"  ⚠ 결과값을 숫자로 변환 실패: {history.result_value} ({e})")
+            return {"anomaly_detected": False}
         
         is_anomaly = self._check_threshold(actual, operator, threshold)
         
