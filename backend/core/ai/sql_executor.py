@@ -21,10 +21,28 @@ class SQLExecutor:
             "password": os.getenv("TEST_CLIENT_DB_PASSWORD")
         }
     
+    def _has_disallowed_semicolon(self, sql: str) -> bool:
+        """멀티 스테이트먼트 방지를 위한 세미콜론 검사.
+        허용: 문장 끝의 단 하나의 세미콜론
+        차단: 그 외 모든 세미콜론 존재
+        """
+        if sql is None:
+            return False
+        stripped = sql.strip()
+        semicolons = [i for i, ch in enumerate(stripped) if ch == ';']
+        if not semicolons:
+            return False
+        # 오직 마지막 문자 하나만 세미콜론이면 허용
+        return not (len(semicolons) == 1 and semicolons[0] == len(stripped) - 1)
+    
     def execute_query(
         self,
         sql: str,
-        fetch_limit: int = 100
+        fetch_limit: int = 100,
+        allow_writes: bool = False,
+        statement_timeout_ms: int = 10000,
+        search_path: Optional[str] = None,
+        allow_multi_statements: bool = False,
     ) -> dict:
         """
         SQL 쿼리 실행
@@ -45,12 +63,32 @@ class SQLExecutor:
         cursor = None
         
         try:
+            # 멀티 스테이트먼트 차단
+            if not allow_multi_statements and self._has_disallowed_semicolon(sql):
+                return {
+                    "success": False,
+                    "error": "멀티 스테이트먼트는 허용되지 않습니다. 쿼리를 단일 문장으로 제공하세요.",
+                    "sql": sql
+                }
+            sanitized_sql = sql.strip()
+            if sanitized_sql.endswith(';'):
+                sanitized_sql = sanitized_sql[:-1]
+
             # 1. DB 연결
-            conn = psycopg2.connect(**self.connection_params)
+            params = dict(self.connection_params)
+            params.setdefault("connect_timeout", 10)
+            conn = psycopg2.connect(**params)
             cursor = conn.cursor(cursor_factory=RealDictCursor)
-            
+
+            # 세션 안전장치
+            if not allow_writes:
+                cursor.execute("SET LOCAL default_transaction_read_only = on")
+            cursor.execute(f"SET LOCAL statement_timeout = {int(statement_timeout_ms)}")
+            if search_path:
+                cursor.execute("SET LOCAL search_path = %s", (search_path,))
+
             # 2. 쿼리 실행
-            cursor.execute(sql)
+            cursor.execute(sanitized_sql)
             
             # 3. SELECT 쿼리인 경우 결과 가져오기
             if cursor.description:
@@ -63,7 +101,7 @@ class SQLExecutor:
                     "data": data,
                     "row_count": len(data),
                     "columns": columns,
-                    "sql": sql
+                    "sql": sanitized_sql
                 }
             else:
                 # INSERT/UPDATE/DELETE 등
@@ -71,7 +109,7 @@ class SQLExecutor:
                 return {
                     "success": True,
                     "message": f"{cursor.rowcount} rows affected",
-                    "sql": sql
+                    "sql": sanitized_sql
                 }
                 
         except psycopg2.Error as e:
@@ -101,13 +139,20 @@ class SQLExecutor:
             {"valid": True/False, "error": "..."}
         """
         try:
-            conn = psycopg2.connect(**self.connection_params)
-            cursor = conn.cursor()
-            
-            # EXPLAIN으로 쿼리 검증 (실행은 안 함)
-            cursor.execute(f"EXPLAIN {sql}")
-            cursor.close()
-            conn.close()
+            # 멀티 스테이트먼트 차단
+            if self._has_disallowed_semicolon(sql):
+                return {"valid": False, "error": "멀티 스테이트먼트는 허용되지 않습니다."}
+
+            sanitized_sql = sql.strip()
+            if sanitized_sql.endswith(';'):
+                sanitized_sql = sanitized_sql[:-1]
+
+            params = dict(self.connection_params)
+            params.setdefault("connect_timeout", 10)
+            with psycopg2.connect(**params) as conn:
+                with conn.cursor() as cursor:
+                    # EXPLAIN으로 쿼리 검증 (실행은 안 함)
+                    cursor.execute(f"EXPLAIN {sanitized_sql}")
             
             return {"valid": True}
             
