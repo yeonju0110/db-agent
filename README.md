@@ -25,4 +25,13 @@ uv run python scripts/setup/ingest_schema_ai_search.py
 
 # 7. 검색 테스트
 uv run python scripts/setup/test_search.py
+
+# 8. 테스트 실행
+uv run python backend/core/ai/schema_retriever.py
+
+# 9. 프롬프트 확인
+uv run python backend/core/ai/prompt_builder.py
+
+# 10. SQL 생성 테스트
+uv run python backend/core/ai/sql_generator.py
 ```
