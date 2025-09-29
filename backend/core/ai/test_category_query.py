@@ -67,7 +67,10 @@ if result.get('generated_sql') and not result.get('error'):
 # 저장된 히스토리 확인
 if result.get('history_id'):
     history = repository.get_history(result['history_id'])
-    print(f"\n저장된 데이터:")
-    print(f"  유형: {history.result_type}")
-    print(f"  단일 값: {history.result_value}")
-    print(f"  다중 행: {history.result_data}")
+    if history:
+        print("\n저장된 데이터:")
+        print(f"  유형: {history.result_type}")
+        print(f"  단일 값: {history.result_value}")
+        print(f"  다중 행: {history.result_data}")
+    else:
+        print("\n저장된 히스토리를 찾을 수 없습니다.")
