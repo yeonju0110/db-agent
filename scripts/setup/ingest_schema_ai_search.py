@@ -15,8 +15,8 @@ Azure AI Search 인덱싱 스크립트 (전처리 + 임베딩 + 업서트)
 - AZURE_OPENAI_ENDPOINT: https://<resource>.openai.azure.com
 - AZURE_OPENAI_API_KEY
 - AZURE_OPENAI_EMBEDDING_DEPLOYMENT: 배포명(예: text-embedding-3-small)
-- AZURE_OPENAI_API_VERSION: 기본 2024-06-01
-- EMBEDDING_DIM: 기본 1536 (모델에 맞춰 설정 권장)
+- AZURE_OPENAI_API_VERSION: 기본 2024-12-01-preview
+- EMBEDDING_DIM: 기본 3072 (배포 모델 차원과 일치하도록 설정 권장)
 
 사용 예시
   uv run python scripts/setup/ingest_schema_ai_search.py \
@@ -226,7 +226,7 @@ def ensure_index(cfg: Config) -> None:
     if not cfg.create_index:
         return
 
-    url = f"{cfg.search_endpoint}/indexes/{cfg.search_index_name}?api-version=2023-11-01"
+    url = f"{cfg.search_endpoint}/indexes/{cfg.search_index_name}?api-version=2024-07-01"
     headers = {"Content-Type": "application/json", "api-key": cfg.search_api_key}
     
     index_def = {
@@ -288,15 +288,23 @@ def embed_texts(cfg: Config, texts: List[str]) -> List[List[float]]:
         return [[] for _ in texts]
     assert AzureOpenAI is not None
     client = AzureOpenAI(api_key=cfg.aoai_api_key, azure_endpoint=cfg.aoai_endpoint, api_version=cfg.aoai_api_version)
-    vectors: List[List[float]] = []
-    # 단순 배치 처리
-    for t in texts:
+    vectors: List[List[float]] = [[] for _ in texts]
+    B = 16  # 배치 크기(필요 시 CLI 옵션화 가능)
+    from openai import APIError, RateLimitError  # type: ignore
+    import httpx  # 안전상 재임포트 (버전별 예외 타입 호환)
+    for i in range(0, len(texts), B):
+        batch = texts[i : i + B]
         try:
-            res = client.embeddings.create(model=cfg.aoai_deployment, input=t)
-            vectors.append(res.data[0].embedding)  # type: ignore
-        except Exception as e:  # noqa: BLE001
-            print(f"[WARN] 임베딩 실패, 빈 벡터로 대체: {e}")
-            vectors.append([])
+            res = client.embeddings.create(model=cfg.aoai_deployment, input=batch)
+            emb = [d.embedding for d in res.data]  # type: ignore
+            # 차원 검증(최초 확인 시점에 오류를 빠르게 감지)
+            if cfg.embedding_dim and emb and len(emb[0]) != cfg.embedding_dim:
+                raise RuntimeError(f"EMBEDDING_DIM({cfg.embedding_dim}) != actual({len(emb[0])})")
+            vectors[i : i + len(emb)] = emb
+        except (APIError, RateLimitError, httpx.HTTPError, RuntimeError) as e:
+            print(f"[WARN] 임베딩 배치 실패({i}-{i+len(batch)-1}): {e}")
+            # 실패 구간은 빈 벡터 유지
+            continue
     return vectors
 
 
@@ -339,7 +347,7 @@ def build_documents(cfg: Config) -> List[Dict]:
 
 
 def upload_documents(cfg: Config, docs: List[Dict]) -> None:
-    url = f"{cfg.search_endpoint}/indexes/{cfg.search_index_name}/docs/index?api-version=2023-11-01"
+    url = f"{cfg.search_endpoint}/indexes/{cfg.search_index_name}/docs/index?api-version=2024-07-01"
     headers = {"Content-Type": "application/json", "api-key": cfg.search_api_key}
     # 배치 업로드
     for i in range(0, len(docs), cfg.batch_size):

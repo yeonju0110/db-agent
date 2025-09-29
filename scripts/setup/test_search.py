@@ -7,11 +7,30 @@ from dotenv import load_dotenv
 
 def main() -> int:
     load_dotenv()
+    endpoint   = os.getenv("AZURE_SEARCH_ENDPOINT")
+    index_name = os.getenv("AZURE_SEARCH_INDEX_NAME")
+    api_key    = os.getenv("AZURE_SEARCH_API_KEY")
+
+    missing = [k for k, v in {
+        "AZURE_SEARCH_ENDPOINT": endpoint,
+        "AZURE_SEARCH_INDEX_NAME": index_name,
+    }.items() if not v]
+    if missing:
+        raise ValueError(f"필수 환경변수 누락: {', '.join(missing)} (.env.example 참고)")
+
+    if api_key:
+        credential = AzureKeyCredential(api_key)
+    else:
+        try:
+            from azure.identity import DefaultAzureCredential
+            credential = DefaultAzureCredential()
+        except Exception as ex:
+            raise ValueError("AZURE_SEARCH_API_KEY 미설정, DefaultAzureCredential 초기화 실패: Azure 로그인 구성 또는 API 키를 설정하세요.") from ex
 
     client = SearchClient(
-        endpoint=os.getenv("AZURE_SEARCH_ENDPOINT"),
-        index_name=os.getenv("AZURE_SEARCH_INDEX_NAME"),
-        credential=AzureKeyCredential(os.getenv("AZURE_SEARCH_API_KEY"))
+        endpoint=endpoint,
+        index_name=index_name,
+        credential=credential
     )
 
     # 테스트 쿼리들

@@ -23,6 +23,6 @@ uv run python scripts/setup/validate_pipeline.py
 # 6. Azure AI Search 인덱싱
 uv run python scripts/setup/ingest_schema_ai_search.py
 
-# 7. 
+# 7. 검색 테스트
 uv run python scripts/setup/test_search.py
 ```

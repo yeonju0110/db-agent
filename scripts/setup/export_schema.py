@@ -217,7 +217,7 @@ def fetch_pg_foreign_keys(conn) -> Dict[Tuple[str, str], List[ForeignKeyInfo]]:
         SELECT kcu.table_schema,
                kcu.table_name,
                kcu.column_name,
-               ccu.table_schema AS referenced_table_schema,
+               ccu.constraint_schema AS referenced_table_schema,
                ccu.table_name  AS referenced_table,
                ccu.column_name AS referenced_column,
                kcu.constraint_name
@@ -225,7 +225,7 @@ def fetch_pg_foreign_keys(conn) -> Dict[Tuple[str, str], List[ForeignKeyInfo]]:
         JOIN information_schema.table_constraints tc
           ON tc.constraint_name = kcu.constraint_name AND tc.table_schema = kcu.table_schema
         JOIN information_schema.constraint_column_usage ccu
-          ON ccu.constraint_name = kcu.constraint_name AND ccu.table_schema = kcu.table_schema
+          ON ccu.constraint_name = kcu.constraint_name AND ccu.constraint_schema = kcu.constraint_schema
         WHERE tc.constraint_type = 'FOREIGN KEY' AND kcu.table_schema NOT IN ('pg_catalog', 'information_schema')
         """
     )
@@ -305,8 +305,10 @@ def ensure_dir(path: Path) -> None:
 
 
 def write_table_outputs(base_dir: Path, card: TableCard) -> None:
+    # 파일명은 안전한 basename으로 사용하되, JSON 내용의 name은 원본 유지
+    basename = card.name.replace("/", "_").replace(" ", "_")
     # JSON
-    json_path = base_dir / f"{card.name}.json"
+    json_path = base_dir / f"{basename}.json"
     with json_path.open("w", encoding="utf-8") as f:
         json.dump(
             {
@@ -330,7 +332,7 @@ def write_table_outputs(base_dir: Path, card: TableCard) -> None:
         )
 
     # Markdown
-    md_path = base_dir / f"{card.name}.md"
+    md_path = base_dir / f"{basename}.md"
     lines: List[str] = []
     lines.append(f"# Table: {card.name}")
     if card.description:
@@ -397,16 +399,19 @@ def build_cards_postgres(conn) -> List[TableCard]:
     cards: List[TableCard] = []
     for schema, table, comment in tables:
         cols = columns_map.get((schema, table), [])
-        pk_cols = set(pk_map.get((schema, table), []))
+        # PK 컬럼 순서 보존 + 멤버십 체크 성능을 위해 set 병행 사용
+        pk_ordered = pk_map.get((schema, table), [])
+        pk_cols_set = set(pk_ordered)
         fk_cols = {fk.column for fk in fk_map.get((schema, table), [])}
         for col in cols:
-            col.is_primary_key = col.name in pk_cols
+            # 멤버십 체크는 set으로, 순서는 리스트로 유지
+            col.is_primary_key = col.name in pk_cols_set
             col.is_foreign_key = col.name in fk_cols
 
         fks = fk_map.get((schema, table), [])
         idxs = idx_map.get((schema, table), [])
         qualified = f"{schema}.{table}"
-        samples = build_sample_queries(schema, table, list(pk_cols), fks)
+        samples = build_sample_queries(schema, table, pk_ordered, fks)
         card = TableCard(
             id=qualified,
             object_type="table",
@@ -415,7 +420,8 @@ def build_cards_postgres(conn) -> List[TableCard]:
             schema=schema,
             description=comment or None,
             columns=cols,
-            primary_key=list(pk_cols),
+            # 다운스트림에서 PK 순서가 중요하므로 원본 순서를 그대로 사용
+            primary_key=pk_ordered,
             foreign_keys=fks,
             indexes=idxs,
             sample_queries=samples,
@@ -443,10 +449,8 @@ def export_schema(out_dir: Path) -> Tuple[int, Path]:
     ensure_dir(tables_dir)
 
     for card in cards:
-        # 파일 이름의 슬래시/공백 등 제거
-        safe_name = card.name.replace("/", "_").replace(" ", "_")
-        # 중첩 dataclass 유지: replace를 사용해 안전하게 이름만 변경
-        write_table_outputs(tables_dir, replace(card, name=safe_name))
+        # 파일명은 함수 내부에서 안전화 처리; 카드 객체의 원본 name은 유지
+        write_table_outputs(tables_dir, card)
 
     # index.json (간단한 요약)
     index = [
