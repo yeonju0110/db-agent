@@ -1,0 +1,173 @@
+{
+  "id": "public.user_addresses",
+  "object_type": "table",
+  "name": "public.user_addresses",
+  "table": "public.user_addresses",
+  "schema": "public",
+  "description": "사용자의 배송지 정보를 저장하는 테이블",
+  "columns": [
+    {
+      "name": "id",
+      "data_type": "int4",
+      "is_nullable": false,
+      "is_primary_key": true,
+      "is_foreign_key": false,
+      "default_value": null,
+      "extra": null,
+      "description": "배송지 고유 식별자"
+    },
+    {
+      "name": "user_id",
+      "data_type": "int4",
+      "is_nullable": false,
+      "is_primary_key": false,
+      "is_foreign_key": true,
+      "default_value": null,
+      "extra": null,
+      "description": "배송지 소유자(사용자) 고유 식별자"
+    },
+    {
+      "name": "name",
+      "data_type": "varchar",
+      "is_nullable": false,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "extra": null,
+      "description": "수령인 이름"
+    },
+    {
+      "name": "phone",
+      "data_type": "varchar",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "extra": null,
+      "description": "수령인 연락처"
+    },
+    {
+      "name": "address",
+      "data_type": "varchar",
+      "is_nullable": false,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "extra": null,
+      "description": "기본 주소 (도로명 주소 등)"
+    },
+    {
+      "name": "detail_address",
+      "data_type": "varchar",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "extra": null,
+      "description": "상세 주소 (아파트 동/호수 등)"
+    },
+    {
+      "name": "postal_code",
+      "data_type": "varchar",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "extra": null,
+      "description": "우편번호"
+    },
+    {
+      "name": "city",
+      "data_type": "varchar",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "extra": null,
+      "description": "도시명",
+      "is_kpi": true,
+      "kpi_description": "도시별 배송지 분포 비율"
+    },
+    {
+      "name": "state",
+      "data_type": "varchar",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "extra": null,
+      "description": "주/도명"
+    },
+    {
+      "name": "is_default",
+      "data_type": "bool",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": "false",
+      "extra": null,
+      "description": "해당 배송지가 사용자의 기본 배송지 여부",
+      "is_kpi": true,
+      "kpi_description": "기본 배송지 설정 비율"
+    },
+    {
+      "name": "created_at",
+      "data_type": "timestamptz",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": "now()",
+      "extra": null,
+      "description": null
+    }
+  ],
+  "primary_key": [
+    "id"
+  ],
+  "foreign_keys": [
+    {
+      "column": "user_id",
+      "referenced_table": "public.users",
+      "referenced_column": "id",
+      "constraint_name": "user_addresses_user_id_fkey"
+    }
+  ],
+  "indexes": [
+    {
+      "name": "user_addresses_pkey",
+      "columns": [
+        "id"
+      ],
+      "is_unique": true
+    }
+  ],
+  "sample_queries": [
+    "SELECT * FROM public.user_addresses LIMIT 10;",
+    "SELECT * FROM public.user_addresses WHERE id = :id;",
+    "SELECT t.* FROM public.user_addresses t JOIN public.users r ON t.user_id = r.id LIMIT 10;"
+  ],
+  "business_tags": [
+    "사용자정보",
+    "배송주소",
+    "이커머스"
+  ],
+  "embedding": null,
+  "business_purpose": "사용자가 주문 시 선택하거나 기본 배송지로 활용할 수 있는 주소 데이터를 관리",
+  "common_queries": [
+    "사용자별 기본 배송지 조회",
+    "특정 지역(도시/주)별 배송지 분포 확인",
+    "사용자 배송지 변경 이력 조회"
+  ],
+  "business_terms": {
+    "배송지": [
+      "Shipping Address",
+      "Delivery Address",
+      "Recipient Address"
+    ],
+    "기본배송지": [
+      "Default Address",
+      "Primary Address"
+    ]
+  },
+  "searchable_text": "테이블: public.user_addresses\n설명: 사용자의 배송지 정보를 저장하는 테이블\n용도: 사용자가 주문 시 선택하거나 기본 배송지로 활용할 수 있는 주소 데이터를 관리\n주요 지표 컬럼:\n  - city(varchar): 도시별 배송지 분포 비율\n  - is_default(bool): 기본 배송지 설정 비율\n전체 컬럼: id, user_id, name, phone, address, detail_address, postal_code, city, state, is_default, created_at\n자주 분석하는 지표:\n  - 사용자별 기본 배송지 조회\n  - 특정 지역(도시/주)별 배송지 분포 확인\n  - 사용자 배송지 변경 이력 조회\n관련 용어:\n  - 배송지: Shipping Address, Delivery Address, Recipient Address\n  - 기본배송지: Default Address, Primary Address\n예시 SQL:\n  SELECT * FROM public.user_addresses LIMIT 10;\n  SELECT * FROM public.user_addresses WHERE id = :id;\n  SELECT t.* FROM public.user_addresses t JOIN public.users r ON t.user_id = r.id LIMIT 10;"
+}

@@ -1,0 +1,172 @@
+{
+  "id": "public.users",
+  "object_type": "table",
+  "name": "public.users",
+  "table": "public.users",
+  "schema": "public",
+  "description": "이커머스 플랫폼에 가입한 사용자들의 기본 정보와 상태를 관리하는 테이블",
+  "columns": [
+    {
+      "name": "id",
+      "data_type": "int4",
+      "is_nullable": false,
+      "is_primary_key": true,
+      "is_foreign_key": false,
+      "default_value": null,
+      "extra": null,
+      "description": "사용자를 고유하게 식별하는 식별자"
+    },
+    {
+      "name": "email",
+      "data_type": "varchar",
+      "is_nullable": false,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "extra": null,
+      "description": "사용자 로그인 및 연락을 위한 이메일 주소"
+    },
+    {
+      "name": "username",
+      "data_type": "varchar",
+      "is_nullable": false,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "extra": null,
+      "description": "사용자 식별용 닉네임 또는 아이디"
+    },
+    {
+      "name": "password_hash",
+      "data_type": "varchar",
+      "is_nullable": false,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "extra": null,
+      "description": "사용자 비밀번호의 해시값으로 인증에 사용"
+    },
+    {
+      "name": "phone",
+      "data_type": "varchar",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "extra": null,
+      "description": "사용자 연락처 정보"
+    },
+    {
+      "name": "birth_date",
+      "data_type": "date",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "extra": null,
+      "description": "사용자 연령대 분석 및 맞춤 마케팅 활용"
+    },
+    {
+      "name": "gender",
+      "data_type": "gender_type",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "extra": null,
+      "description": "사용자 성별 정보"
+    },
+    {
+      "name": "status",
+      "data_type": "user_status",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": "'active'::user_status",
+      "extra": null,
+      "description": "사용자 계정의 현재 상태(활성, 휴면, 탈퇴 등)",
+      "is_kpi": true,
+      "kpi_description": "사용자 활성화 및 비활성화 비율"
+    },
+    {
+      "name": "created_at",
+      "data_type": "timestamptz",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": "now()",
+      "extra": null,
+      "description": "사용자 계정 생성 일시",
+      "is_kpi": true,
+      "kpi_description": "신규 가입자 수 및 가입 추세"
+    },
+    {
+      "name": "updated_at",
+      "data_type": "timestamptz",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": "now()",
+      "extra": null,
+      "description": "사용자 정보 최종 수정 일시"
+    },
+    {
+      "name": "last_login_at",
+      "data_type": "timestamptz",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "extra": null,
+      "description": null
+    }
+  ],
+  "primary_key": [
+    "id"
+  ],
+  "foreign_keys": [],
+  "indexes": [
+    {
+      "name": "users_email_key",
+      "columns": [
+        "email"
+      ],
+      "is_unique": true
+    },
+    {
+      "name": "users_pkey",
+      "columns": [
+        "id"
+      ],
+      "is_unique": true
+    }
+  ],
+  "sample_queries": [
+    "SELECT * FROM public.users LIMIT 10;",
+    "SELECT * FROM public.users WHERE id = :id;"
+  ],
+  "business_tags": [
+    "사용자관리",
+    "계정정보",
+    "인증"
+  ],
+  "embedding": null,
+  "business_purpose": "사용자 계정 관리, 인증 및 마케팅 대상 선별을 위한 사용자 정보 저장",
+  "common_queries": [
+    "전체 가입자 수 및 활성 사용자 수 조회",
+    "최근 가입자 및 가입 추세 분석",
+    "특정 상태(예: 휴면, 탈퇴) 사용자 목록 조회"
+  ],
+  "business_terms": {
+    "사용자": [
+      "User",
+      "Member",
+      "Customer"
+    ],
+    "상태": [
+      "Status",
+      "Account Status"
+    ]
+  },
+  "searchable_text": "테이블: public.users\n설명: 이커머스 플랫폼에 가입한 사용자들의 기본 정보와 상태를 관리하는 테이블\n용도: 사용자 계정 관리, 인증 및 마케팅 대상 선별을 위한 사용자 정보 저장\n주요 지표 컬럼:\n  - status(user_status): 사용자 활성화 및 비활성화 비율\n  - created_at(timestamptz): 신규 가입자 수 및 가입 추세\n전체 컬럼: id, email, username, password_hash, phone, birth_date, gender, status, created_at, updated_at, last_login_at\n자주 분석하는 지표:\n  - 전체 가입자 수 및 활성 사용자 수 조회\n  - 최근 가입자 및 가입 추세 분석\n  - 특정 상태(예: 휴면, 탈퇴) 사용자 목록 조회\n관련 용어:\n  - 사용자: User, Member, Customer\n  - 상태: Status, Account Status\n예시 SQL:\n  SELECT * FROM public.users LIMIT 10;\n  SELECT * FROM public.users WHERE id = :id;"
+}

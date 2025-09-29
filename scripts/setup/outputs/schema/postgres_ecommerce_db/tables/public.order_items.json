@@ -1,0 +1,147 @@
+{
+  "id": "public.order_items",
+  "object_type": "table",
+  "name": "public.order_items",
+  "table": "public.order_items",
+  "schema": "public",
+  "description": "고객 주문 내역에서 각 주문별 상품의 상세 정보를 저장하는 테이블",
+  "columns": [
+    {
+      "name": "id",
+      "data_type": "int4",
+      "is_nullable": false,
+      "is_primary_key": true,
+      "is_foreign_key": false,
+      "default_value": null,
+      "extra": null,
+      "description": "주문항목의 고유 식별자"
+    },
+    {
+      "name": "order_id",
+      "data_type": "int4",
+      "is_nullable": false,
+      "is_primary_key": false,
+      "is_foreign_key": true,
+      "default_value": null,
+      "extra": null,
+      "description": "해당 주문항목이 속한 주문의 고유 식별자"
+    },
+    {
+      "name": "product_id",
+      "data_type": "int4",
+      "is_nullable": false,
+      "is_primary_key": false,
+      "is_foreign_key": true,
+      "default_value": null,
+      "extra": null,
+      "description": "주문된 상품의 고유 식별자"
+    },
+    {
+      "name": "quantity",
+      "data_type": "int4",
+      "is_nullable": false,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "extra": null,
+      "description": "주문된 상품의 수량",
+      "is_kpi": true,
+      "kpi_description": "판매된 상품의 수량을 나타내는 KPI"
+    },
+    {
+      "name": "unit_price",
+      "data_type": "numeric",
+      "is_nullable": false,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "extra": null,
+      "description": "상품의 단가, 개별 판매 가격"
+    },
+    {
+      "name": "total_price",
+      "data_type": "numeric",
+      "is_nullable": false,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": null,
+      "extra": null,
+      "description": "수량과 단가를 곱한 주문항목별 총 금액",
+      "is_kpi": true,
+      "kpi_description": "해당 주문항목의 총 매출액을 나타내는 KPI"
+    },
+    {
+      "name": "created_at",
+      "data_type": "timestamptz",
+      "is_nullable": true,
+      "is_primary_key": false,
+      "is_foreign_key": false,
+      "default_value": "now()",
+      "extra": null,
+      "description": "주문항목이 생성된 시점 (주문 시각)"
+    }
+  ],
+  "primary_key": [
+    "id"
+  ],
+  "foreign_keys": [
+    {
+      "column": "order_id",
+      "referenced_table": "public.orders",
+      "referenced_column": "id",
+      "constraint_name": "order_items_order_id_fkey"
+    },
+    {
+      "column": "product_id",
+      "referenced_table": "public.products",
+      "referenced_column": "id",
+      "constraint_name": "order_items_product_id_fkey"
+    }
+  ],
+  "indexes": [
+    {
+      "name": "order_items_pkey",
+      "columns": [
+        "id"
+      ],
+      "is_unique": true
+    }
+  ],
+  "sample_queries": [
+    "SELECT * FROM public.order_items LIMIT 10;",
+    "SELECT * FROM public.order_items WHERE id = :id;",
+    "SELECT t.* FROM public.order_items t JOIN public.orders r ON t.order_id = r.id LIMIT 10;",
+    "SELECT t.* FROM public.order_items t JOIN public.products r ON t.product_id = r.id LIMIT 10;"
+  ],
+  "business_tags": [
+    "주문",
+    "상품",
+    "매출",
+    "판매내역"
+  ],
+  "embedding": null,
+  "business_purpose": "주문별 상품별 판매 수량과 가격 정보를 관리하여 매출 분석 및 재고 관리를 지원",
+  "common_queries": [
+    "특정 기간 동안 판매된 상품별 총 판매량 조회",
+    "주문별 총 매출액 계산",
+    "상품별 단가 변동 추이 분석"
+  ],
+  "business_terms": {
+    "주문항목": [
+      "Order Item",
+      "주문 상세",
+      "주문 내역"
+    ],
+    "단가": [
+      "Unit Price",
+      "상품 가격",
+      "판매 단가"
+    ],
+    "총가격": [
+      "Total Price",
+      "합계 금액",
+      "판매 금액"
+    ]
+  },
+  "searchable_text": "테이블: public.order_items\n설명: 고객 주문 내역에서 각 주문별 상품의 상세 정보를 저장하는 테이블\n용도: 주문별 상품별 판매 수량과 가격 정보를 관리하여 매출 분석 및 재고 관리를 지원\n주요 지표 컬럼:\n  - quantity(int4): 판매된 상품의 수량을 나타내는 KPI\n  - total_price(numeric): 해당 주문항목의 총 매출액을 나타내는 KPI\n전체 컬럼: id, order_id, product_id, quantity, unit_price, total_price, created_at\n자주 분석하는 지표:\n  - 특정 기간 동안 판매된 상품별 총 판매량 조회\n  - 주문별 총 매출액 계산\n  - 상품별 단가 변동 추이 분석\n관련 용어:\n  - 주문항목: Order Item, 주문 상세, 주문 내역\n  - 단가: Unit Price, 상품 가격, 판매 단가\n  - 총가격: Total Price, 합계 금액, 판매 금액\n예시 SQL:\n  SELECT * FROM public.order_items LIMIT 10;\n  SELECT * FROM public.order_items WHERE id = :id;\n  SELECT t.* FROM public.order_items t JOIN public.orders r ON t.order_id = r.id LIMIT 10;"
+}

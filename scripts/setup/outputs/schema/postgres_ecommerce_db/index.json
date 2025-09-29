@@ -1,0 +1,72 @@
+[
+  {
+    "id": "public.categories",
+    "name": "public.categories",
+    "schema": "public",
+    "table": "public.categories",
+    "num_columns": 7
+  },
+  {
+    "id": "public.inventory",
+    "name": "public.inventory",
+    "schema": "public",
+    "table": "public.inventory",
+    "num_columns": 7
+  },
+  {
+    "id": "public.order_items",
+    "name": "public.order_items",
+    "schema": "public",
+    "table": "public.order_items",
+    "num_columns": 7
+  },
+  {
+    "id": "public.orders",
+    "name": "public.orders",
+    "schema": "public",
+    "table": "public.orders",
+    "num_columns": 14
+  },
+  {
+    "id": "public.payments",
+    "name": "public.payments",
+    "schema": "public",
+    "table": "public.payments",
+    "num_columns": 9
+  },
+  {
+    "id": "public.products",
+    "name": "public.products",
+    "schema": "public",
+    "table": "public.products",
+    "num_columns": 13
+  },
+  {
+    "id": "public.reviews",
+    "name": "public.reviews",
+    "schema": "public",
+    "table": "public.reviews",
+    "num_columns": 11
+  },
+  {
+    "id": "public.user_activities",
+    "name": "public.user_activities",
+    "schema": "public",
+    "table": "public.user_activities",
+    "num_columns": 8
+  },
+  {
+    "id": "public.user_addresses",
+    "name": "public.user_addresses",
+    "schema": "public",
+    "table": "public.user_addresses",
+    "num_columns": 11
+  },
+  {
+    "id": "public.users",
+    "name": "public.users",
+    "schema": "public",
+    "table": "public.users",
+    "num_columns": 11
+  }
+]
