@@ -38,21 +38,38 @@ class SchemaRetriever:
     def __init__(self):
         load_dotenv()
         
+        # 환경 변수 로드 및 검증
+        endpoint = os.getenv("AZURE_SEARCH_ENDPOINT")
+        api_key = os.getenv("AZURE_SEARCH_API_KEY")
+        index_name = os.getenv("AZURE_SEARCH_INDEX_NAME", "dbschema-tables")
+        azure_api_key = os.getenv("AZURE_OPENAI_API_KEY")
+        azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
+        azure_api_version = os.getenv("AZURE_OPENAI_API_VERSION", "2024-12-01-preview")
+        self.embedding_deployment = os.getenv("AZURE_OPENAI_EMBEDDING_DEPLOYMENT")
+
+        missing = [k for k, v in {
+            "AZURE_SEARCH_ENDPOINT": endpoint,
+            "AZURE_SEARCH_API_KEY": api_key,
+            "AZURE_OPENAI_API_KEY": azure_api_key,
+            "AZURE_OPENAI_ENDPOINT": azure_endpoint,
+            "AZURE_OPENAI_EMBEDDING_DEPLOYMENT": self.embedding_deployment,
+        }.items() if not v]
+        if missing:
+            raise ValueError(f"필수 환경 변수 누락: {', '.join(missing)}")
+
         # Azure Search 클라이언트
         self.search_client = SearchClient(
-            endpoint=os.getenv("AZURE_SEARCH_ENDPOINT"),
-            index_name=os.getenv("AZURE_SEARCH_INDEX_NAME", "dbschema-tables"),
-            credential=AzureKeyCredential(os.getenv("AZURE_SEARCH_API_KEY"))
+            endpoint=endpoint,
+            index_name=index_name,
+            credential=AzureKeyCredential(api_key)
         )
         
         # Azure OpenAI 임베딩 클라이언트
         self.openai_client = AzureOpenAI(
-            api_key=os.getenv("AZURE_OPENAI_API_KEY"),
-            azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
-            api_version=os.getenv("AZURE_OPENAI_API_VERSION", "2024-12-01-preview")
+            api_key=azure_api_key,
+            azure_endpoint=azure_endpoint,
+            api_version=azure_api_version
         )
-        
-        self.embedding_deployment = os.getenv("AZURE_OPENAI_EMBEDDING_DEPLOYMENT")
     
     def _create_embedding(self, text: str) -> List[float]:
         """텍스트를 벡터로 변환"""
