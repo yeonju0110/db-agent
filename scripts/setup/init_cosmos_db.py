@@ -11,6 +11,18 @@ endpoint = os.getenv("COSMOS_ENDPOINT")
 key = os.getenv("COSMOS_KEY")
 database_name = os.getenv("COSMOS_DATABASE", "db-monitoring")
 
+if not endpoint or not key:
+    missing_vars = []
+    if not endpoint:
+        missing_vars.append("COSMOS_ENDPOINT")
+    if not key:
+        missing_vars.append("COSMOS_KEY")
+    
+    raise SystemExit(
+        f"필수 환경변수가 설정되지 않았습니다: {', '.join(missing_vars)}\n"
+        "README의 환경변수 설정 단계를 먼저 수행하세요."
+    )
+
 client = CosmosClient(endpoint, key)
 
 # 데이터베이스 생성
