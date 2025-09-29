@@ -1,0 +1,34 @@
+name: db-agent
+x-service-defaults: &service-defaults
+  restart: unless-stopped
+  networks:
+    - db-agent-network
+  logging:
+    driver: "json-file"
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+services:
+  db-agent-postgres:
+    image: postgres:15
+    ports:
+      - "${TEST_CLIENT_DB_PORT:-15432}:5432"
+    environment:
+      - POSTGRES_PASSWORD=${TEST_CLIENT_DB_PASSWORD:-1234}
+      - POSTGRES_DB=${TEST_CLIENT_DB_NAME:-ecommerce_db}
+      - POSTGRES_USER=${TEST_CLIENT_DB_USER:-monitoring_user}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/data/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./scripts/data/sample_data.sql:/docker-entrypoint-initdb.d/02-data.sql
+    networks:
+      - db-agent-network
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  db-agent-network:
+    driver: bridge
