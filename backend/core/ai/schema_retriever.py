@@ -74,11 +74,17 @@ class SchemaRetriever:
     def _create_embedding(self, text: str) -> List[float]:
         """텍스트를 벡터로 변환"""
         try:
-            response = self.openai_client.embeddings.create(
-                model=self.embedding_deployment,
-                input=text,
-                dimensions=int(os.getenv("EMBEDDING_DIM"))
-            )
+            # dimensions는 설정/지원 시에만 전달
+            emb_dim_env = os.getenv("AZURE_OPENAI_EMBEDDING_DIM") or os.getenv("EMBEDDING_DIM")
+            kwargs = {"model": self.embedding_deployment, "input": text}
+            if emb_dim_env is not None:
+                try:
+                    emb_dim = int(str(emb_dim_env).strip())
+                    if emb_dim > 0:
+                        kwargs["dimensions"] = emb_dim
+                except (ValueError, TypeError):
+                    pass
+            response = self.openai_client.embeddings.create(**kwargs)
             return response.data[0].embedding
         except Exception as e:
             print(f"임베딩 생성 실패: {e}")
@@ -123,7 +129,7 @@ class SchemaRetriever:
             # 3. 결과 파싱
             tables = []
             for result in results:
-                # business_tags에서 common_queries 추출
+                # content에서 common_queries 추출
                 common_queries = []
                 if "content" in result:
                     content = result["content"]
