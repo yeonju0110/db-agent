@@ -117,6 +117,50 @@ class SQLExecutor:
             if sanitized_sql.endswith(';'):
                 sanitized_sql = sanitized_sql[:-1]
 
+            # 2. 구문 화이트리스트/블랙리스트 검사
+            normalized = sanitized_sql.lstrip()
+            # 선행 괄호 제거 (서브쿼리로 감싼 형태 방지)
+            while normalized.startswith('('):
+                normalized = normalized[1:].lstrip()
+            # 선행 주석 제거 (--, /* */)
+            while normalized.startswith('--') or normalized.startswith('/*'):
+                if normalized.startswith('--'):
+                    nl = normalized.find('\n')
+                    normalized = '' if nl == -1 else normalized[nl + 1:]
+                else:
+                    end = normalized.find('*/')
+                    normalized = '' if end == -1 else normalized[end + 2:]
+                normalized = normalized.lstrip()
+            # 공백 축약
+            normalized = ' '.join(normalized.split())
+            first_kw = (normalized.split(None, 1)[0] if normalized else '').upper()
+
+            # 즉시 차단: 위험/세션 영향/메타 명령
+            disallowed_any = {
+                'COPY', 'DO', 'CALL', 'LISTEN', 'NOTIFY', 'EXECUTE',
+                'PG_SLEEP', 'PG_TERMINATE_BACKEND', 'COPYTO', 'COPYFROM', 'COPY',
+            }
+            if first_kw.startswith('\\') or first_kw in disallowed_any:
+                return {
+                    "success": False,
+                    "error": f"허용되지 않는 구문입니다: {first_kw or '(empty)'}",
+                    "sql": sql,
+                }
+
+            allowed_ro = {"SELECT", "WITH", "VALUES", "TABLE", "EXPLAIN"}
+            allowed_rw = allowed_ro | {"INSERT", "UPDATE", "DELETE"}
+            allowed = allowed_rw if allow_writes else allowed_ro
+            if first_kw and first_kw not in allowed:
+                return {
+                    "success": False,
+                    "error": (
+                        f"허용되지 않는 첫 구문입니다({first_kw}). "
+                        f"읽기 전용: {', '.join(sorted(allowed_ro))}"
+                        + (", 쓰기 허용 시: " + ", ".join(sorted(allowed_rw - allowed_ro)) if allow_writes else "")
+                    ),
+                    "sql": sql,
+                }
+
             # 1. DB 연결
             params = dict(self.connection_params)
             params.setdefault("connect_timeout", 10)
@@ -195,6 +239,30 @@ class SQLExecutor:
             sanitized_sql = sql.strip()
             if sanitized_sql.endswith(';'):
                 sanitized_sql = sanitized_sql[:-1]
+
+            # 2. 구문 화이트리스트/블랙리스트 검사 (검증 단계는 읽기 전용 허용 집합만 허용)
+            normalized = sanitized_sql.lstrip()
+            while normalized.startswith('('):
+                normalized = normalized[1:].lstrip()
+            while normalized.startswith('--') or normalized.startswith('/*'):
+                if normalized.startswith('--'):
+                    nl = normalized.find('\n')
+                    normalized = '' if nl == -1 else normalized[nl + 1:]
+                else:
+                    end = normalized.find('*/')
+                    normalized = '' if end == -1 else normalized[end + 2:]
+                normalized = normalized.lstrip()
+            normalized = ' '.join(normalized.split())
+            first_kw = (normalized.split(None, 1)[0] if normalized else '').upper()
+            disallowed_any = {
+                'COPY', 'DO', 'CALL', 'LISTEN', 'NOTIFY', 'EXECUTE',
+                'PG_SLEEP', 'PG_TERMINATE_BACKEND', 'COPYTO', 'COPYFROM', 'COPY',
+            }
+            if first_kw.startswith('\\') or first_kw in disallowed_any:
+                return {"valid": False, "error": f"허용되지 않는 구문입니다: {first_kw or '(empty)'}"}
+            allowed_ro = {"SELECT", "WITH", "VALUES", "TABLE", "EXPLAIN"}
+            if first_kw and first_kw not in allowed_ro:
+                return {"valid": False, "error": f"허용되지 않는 첫 구문입니다({first_kw}). 읽기 전용: {', '.join(sorted(allowed_ro))}"}
 
             params = dict(self.connection_params)
             params.setdefault("connect_timeout", 10)
