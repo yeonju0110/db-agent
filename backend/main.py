@@ -29,7 +29,7 @@ async def health_check():
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(
-        "main:app",
+        "backend.main:app",
         host=settings.api_host,
         port=settings.api_port,
         reload=settings.debug
