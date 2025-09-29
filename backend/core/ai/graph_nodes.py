@@ -275,11 +275,15 @@ class GraphNodes:
         
         if is_anomaly:
             print(f"  🚨 이상 감지! {actual} {operator} {threshold}")
-            
-            if operator in ['>', '>=']:
+            if operator in ('>', '>='):
+                anomaly_type = AnomalyType.THRESHOLD_EXCEEDED
+            elif operator in ('<', '<='):
+                anomaly_type = AnomalyType.THRESHOLD_BELOW
+            elif operator in ('==', '!='):
+                # 동등/비동등 조건 충족도 '임계 초과' 계열로 분류(대안: 전용 타입 도입)
                 anomaly_type = AnomalyType.THRESHOLD_EXCEEDED
             else:
-                anomaly_type = AnomalyType.THRESHOLD_BELOW
+                anomaly_type = AnomalyType.QUERY_ERROR
             
             anomaly = Anomaly(
                 metric_id=metric_id,
