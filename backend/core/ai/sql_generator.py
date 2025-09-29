@@ -2,8 +2,9 @@
 SQL 생성기 - SchemaRetriever + Azure OpenAI
 """
 import os
+import logging
 from typing import Optional
-from openai import AzureOpenAI
+from openai import AzureOpenAI, OpenAIError, APIError, APITimeoutError, RateLimitError
 from dotenv import load_dotenv
 
 try:
@@ -21,6 +22,7 @@ class SQLGenerator:
         load_dotenv()
         
         self.retriever = SchemaRetriever()
+        self.logger = logging.getLogger(__name__)
 
         # 환경 변수 검증 및 클라이언트 초기화
         azure_api_key = os.getenv("AZURE_OPENAI_API_KEY")
@@ -87,7 +89,8 @@ class SQLGenerator:
                 model=self.chat_deployment,
                 messages=messages,
                 temperature=temperature,
-                max_tokens=500
+                max_tokens=500,
+                timeout=30.0
             )
             
             sql = response.choices[0].message.content.strip()
@@ -109,15 +112,50 @@ class SQLGenerator:
                 "tables_info": relevant_tables
             }
             
-        except Exception as e:
+        except APITimeoutError as e:
+            error_msg = f"SQL 생성 타임아웃 (30초 초과): {str(e)}"
+            self.logger.error(error_msg)
             return {
-                "error": (
-                    "SQL 생성 실패: Azure OpenAI 호출 에러. 배포명이 올바른지 확인하세요. "
-                    "(오류 세부: " + str(e) + ")"
-                ) if "DeploymentNotFound" in str(e) else f"SQL 생성 실패: {str(e)}",
+                "error": error_msg,
                 "sql": None,
                 "tables_used": []
             }
+            
+        except RateLimitError as e:
+            error_msg = f"API 호출 한도 초과: {str(e)}"
+            self.logger.error(error_msg)
+            return {
+                "error": error_msg,
+                "sql": None,
+                "tables_used": []
+            }
+            
+        except APIError as e:
+            error_msg = (
+                "SQL 생성 실패: Azure OpenAI 호출 에러. 배포명이 올바른지 확인하세요. "
+                f"(오류 세부: {str(e)})"
+            ) if "DeploymentNotFound" in str(e) else f"OpenAI API 오류: {str(e)}"
+            self.logger.error(error_msg)
+            return {
+                "error": error_msg,
+                "sql": None,
+                "tables_used": []
+            }
+            
+        except OpenAIError as e:
+            error_msg = f"OpenAI 클라이언트 오류: {str(e)}"
+            self.logger.error(error_msg)
+            return {
+                "error": error_msg,
+                "sql": None,
+                "tables_used": []
+            }
+            
+        except Exception as e:
+            # 예상하지 못한 예외는 로깅 후 재발생
+            error_msg = f"예상치 못한 SQL 생성 오류: {str(e)}"
+            self.logger.exception(error_msg)  # 스택 트레이스 포함
+            raise  # 예상치 못한 예외는 상위로 전파
 
 
 # 테스트

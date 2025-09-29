@@ -34,4 +34,13 @@ uv run python backend/core/ai/prompt_builder.py
 
 # 10. SQL 생성 테스트
 uv run python backend/core/ai/sql_generator.py
+
+# 11. Cosmos DB 초기화
+uv run python scripts/setup/init_cosmos_db.py
+
+# 12. 워크플로우 테스트 (단일 값)
+uv run python backend/core/ai/agent_graph.py
+
+# 13. 카테고리형 쿼리 테스트 (다중 행)
+uv run python backend/core/ai/test_category_query.py
 ```
