@@ -15,16 +15,18 @@ from backend.repositories.monitoring_repository import get_repository
 from backend.models.monitoring import MetricStatus, MonitoringMetric
 from backend.core.ai.agent_graph import create_agent_graph
 from backend.core.ai.sql_executor import SQLExecutor
+from backend.services.table_anomaly_service import TableAnomalyService
 
 
 class MetricScheduler:
     """지표 스케줄러 (SQL 캐싱 지원)"""
     
-    def __init__(self, interval_minutes: int = 60):
+    def __init__(self, interval_minutes: int = 5):
         self.interval_minutes = interval_minutes
         self.repository = get_repository()
         self.graph = create_agent_graph()
         self.executor = SQLExecutor()
+        self.table_anomaly_service = TableAnomalyService()
         self.running = False
     
     async def start(self):
@@ -65,6 +67,13 @@ class MetricScheduler:
                 await self.execute_metric(metric)
             except Exception as e:
                 print(f"  ❌ 실행 실패: {e}")
+        
+        # 테이블 이상치 검사 실행
+        print(f"\n[테이블 이상치 검사] 시작")
+        try:
+            await self.execute_table_anomaly_detection()
+        except Exception as e:
+            print(f"  ❌ 테이블 이상치 검사 실패: {e}")
         
         print(f"\n{'='*80}")
         print(f"[스케줄러] 실행 완료")
@@ -167,6 +176,33 @@ class MetricScheduler:
         state.update(result)
         
         self._print_result(state)
+    
+    async def execute_table_anomaly_detection(self):
+        """테이블 이상치 검사 실행"""
+        # 모든 활성 지표에서 관련 테이블들 추출
+        metrics = self.repository.list_metrics(status=MetricStatus.ACTIVE)
+        monitored_tables = set()
+        
+        for metric in metrics:
+            if metric.related_tables:
+                for table in metric.related_tables:
+                    # 스키마명 제거 (예: "public.orders" -> "orders")
+                    table_name = table.split('.').pop() if '.' in table else table
+                    monitored_tables.add(table_name.lower())
+        
+        if not monitored_tables:
+            print("  → 모니터링 중인 테이블 없음")
+            return
+        
+        print(f"  → 검사할 테이블: {', '.join(sorted(monitored_tables))}")
+        
+        for table_name in sorted(monitored_tables):
+            try:
+                print(f"  → {table_name} 테이블 검사 중...")
+                result = await self.table_anomaly_service.scan_table_anomalies(table_name)
+                print(f"    ✅ 완료: {result['total_records']}개 레코드, {result['anomaly_count']}개 이상치")
+            except Exception as e:
+                print(f"    ❌ 실패: {e}")
     
     def _print_result(self, result: dict):
         """실행 결과 출력"""

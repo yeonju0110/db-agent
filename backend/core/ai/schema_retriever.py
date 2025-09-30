@@ -96,7 +96,7 @@ class SchemaRetriever:
         top_k: int = 3
     ) -> List[TableInfo]:
         """
-        자연어 쿼리로 관련 테이블 검색 (순수 벡터 검색)
+        자연어 쿼리로 관련 테이블 검색 (텍스트 검색)
         
         Args:
             query: 한국어 자연어 쿼리 (예: "오늘 주문 건수")
@@ -105,28 +105,49 @@ class SchemaRetriever:
         Returns:
             검색된 테이블 정보 리스트 (유사도 높은 순)
         """
-        # 1. 쿼리를 벡터로 변환
-        query_vector = self._create_embedding(query)
+        # 텍스트 검색 사용 (벡터 검색 비활성화)
+        return self._fallback_text_search(query, top_k)
+    
+    def get_recommended_tables(
+        self, 
+        query: str, 
+        min_score: float = 1.0,
+        max_tables: int = 5
+    ) -> List[TableInfo]:
+        """
+        모니터링용 추천 테이블 목록 반환
         
-        if not query_vector:
-            return self._fallback_text_search(query, top_k)
-        
-        # 2. 순수 벡터 검색
-        try:
-            vector_query = VectorizedQuery(
-                vector=query_vector,
-                k_nearest_neighbors=top_k * 2,
-                fields="embedding"
-            )
+        Args:
+            query: 자연어 쿼리
+            min_score: 최소 점수 임계값 (기본 1.0)
+            max_tables: 최대 추천 테이블 수 (기본 5개)
             
+        Returns:
+            추천 테이블 정보 리스트 (점수 높은 순)
+        """
+        # 더 많은 테이블을 검색해서 추천 목록 생성
+        all_tables = self._fallback_text_search(query, top_k=max_tables * 2)
+        
+        # 점수 기준으로 필터링 및 정렬
+        recommended = [
+            table for table in all_tables 
+            if table.score >= min_score
+        ]
+        
+        # 점수 높은 순으로 정렬 (이미 정렬되어 있지만 확실히 하기 위해)
+        recommended.sort(key=lambda x: x.score, reverse=True)
+        
+        return recommended[:max_tables]
+    
+    def _fallback_text_search(self, query: str, top_k: int) -> List[TableInfo]:
+        """텍스트 검색 (메인 검색 방법)"""
+        try:
             results = self.search_client.search(
-                search_text=None,
-                vector_queries=[vector_query],
-                select=["name", "description", "columns_text", "business_tags", "content"],
+                search_text=query,
+                select=["display_name", "description", "columns_text", "business_tags", "content"],
                 top=top_k
             )
             
-            # 3. 결과 파싱
             tables = []
             for result in results:
                 # content에서 common_queries 추출
@@ -138,7 +159,7 @@ class SchemaRetriever:
                         common_queries = [q.strip() for q in queries_section.split("|") if q.strip()]
                 
                 table = TableInfo(
-                    name=result["name"],
+                    name=result["display_name"],
                     description=result.get("description", ""),
                     columns_text=result.get("columns_text", ""),
                     common_queries=common_queries,
@@ -147,34 +168,8 @@ class SchemaRetriever:
                 tables.append(table)
             
             return tables
-            
         except Exception as e:
-            print(f"벡터 검색 실패: {e}")
-            return self._fallback_text_search(query, top_k)
-    
-    def _fallback_text_search(self, query: str, top_k: int) -> List[TableInfo]:
-        """벡터 검색 실패 시 텍스트 검색"""
-        try:
-            results = self.search_client.search(
-                search_text=query,
-                select=["name", "description", "columns_text", "content"],
-                top=top_k
-            )
-            
-            tables = []
-            for result in results:
-                table = TableInfo(
-                    name=result["name"],
-                    description=result.get("description", ""),
-                    columns_text=result.get("columns_text", ""),
-                    common_queries=[],
-                    score=result.get("@search.score", 0.0)
-                )
-                tables.append(table)
-            
-            return tables
-        except Exception as e:
-            print(f"텍스트 검색도 실패: {e}")
+            print(f"텍스트 검색 실패: {e}")
             return []
 
 

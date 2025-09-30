@@ -73,7 +73,13 @@ class GraphNodes:
             for t in tables
         ]
         
-        print(f"  ✓ 검색된 테이블: {[t['name'] for t in tables_dict]}")
+        # 검색 결과 상세 출력
+        print(f"  ✓ 검색된 테이블 ({len(tables_dict)}개):")
+        for i, table in enumerate(tables_dict, 1):
+            print(f"    {i}. {table['name']} (점수: {table['score']:.2f})")
+            if table['description']:
+                print(f"       설명: {table['description'][:60]}...")
+        
         return {"relevant_tables": tables_dict}
     
 
