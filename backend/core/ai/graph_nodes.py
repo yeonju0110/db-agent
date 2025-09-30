@@ -276,20 +276,21 @@ class GraphNodes:
         return {"history_id": saved.id}
     
     def detect_anomaly_node(self, state: AgentState) -> Dict[str, Any]:
-        """노드 6: 이상 감지 (단일 값만 지원)"""
-        print(f"\n[노드 6] 이상 감지 중...")
+        """노드 6: 고도화된 이상 감지 (단일값 + 카테고리형 지원)"""
+        print(f"\n[노드 6] 고도화된 이상 감지 중...")
         
         metric_id = state.get('metric_id')
         history_id = state.get('history_id')
         threshold_config = state.get('threshold_config')
         
-        if not all([metric_id, history_id, threshold_config]):
-            print(f"  ⚠ 이상 감지 스킵 (설정 없음)")
+        if not all([metric_id, history_id]):
+            print(f"  ⚠ 이상 감지 스킵 (필수 정보 없음)")
             return {"anomaly_detected": False}
         
-        if not threshold_config.get('enabled'):
-            print(f"  ⚠ 임계값 검사 비활성화")
-            return {"anomaly_detected": False}
+        # 임계값 설정이 없어도 카테고리형 이상치 감지 가능
+        if not threshold_config or not threshold_config.get('enabled'):
+            print(f"  ℹ 임계값 검사 비활성화 - 카테고리형 이상치만 검사")
+            return self._detect_categorical_anomalies(state)
         
         # 최신 히스토리 가져오기
         history = self.repository.get_history(history_id)
@@ -364,6 +365,76 @@ class GraphNodes:
             }
         else:
             print(f"  ✓ 정상 범위: {actual} {operator} {threshold}")
+            return {"anomaly_detected": False}
+    
+    def _detect_categorical_anomalies(self, state: AgentState) -> Dict[str, Any]:
+        """카테고리형 데이터 이상치 감지 (20개 중 1개도 감지)"""
+        print(f"  🔍 카테고리형 이상치 감지 중...")
+        
+        history_id = state.get('history_id')
+        history = self.repository.get_history(history_id)
+        
+        if not history or history.result_type != QueryResultType.MULTIPLE_ROWS:
+            print(f"  ⚠ 카테고리형 데이터 없음")
+            return {"anomaly_detected": False}
+        
+        result_data = history.result_data
+        if not result_data or len(result_data) == 0:
+            print(f"  ⚠ 결과 데이터 없음")
+            return {"anomaly_detected": False}
+        
+        # 분포 분석
+        total_records = sum(row.get('count', 0) for row in result_data)
+        anomalies = []
+        
+        for row in result_data:
+            count = row.get('count', 0)
+            if count == 0:
+                continue
+                
+            percentage = (count / total_records) * 100
+            
+            # 극소 카테고리 (1% 미만) - 100개 중 1개
+            if percentage < 1.0 and count >= 1:
+                anomalies.append({
+                    "type": "rare_category",
+                    "value": row,
+                    "count": count,
+                    "percentage": percentage,
+                    "severity": "high"
+                })
+                print(f"  🚨 극소 카테고리: {row} ({count}개, {percentage:.2f}%)")
+            
+            # 소수 카테고리 (5% 미만) - 20개 중 1개
+            elif percentage < 5.0 and count >= 1:
+                anomalies.append({
+                    "type": "minority_category", 
+                    "value": row,
+                    "count": count,
+                    "percentage": percentage,
+                    "severity": "medium"
+                })
+                print(f"  ⚠ 소수 카테고리: {row} ({count}개, {percentage:.2f}%)")
+        
+        if anomalies:
+            # 이상치 저장
+            anomaly = Anomaly(
+                metric_id=state.get('metric_id'),
+                history_id=history_id,
+                anomaly_type=AnomalyType.THRESHOLD_EXCEEDED,  # 임시로 사용
+                threshold_value=5.0,  # 5% 기준
+                actual_value=len(anomalies)
+            )
+            saved = self.repository.create_anomaly(anomaly)
+            
+            return {
+                "anomaly_detected": True,
+                "anomaly_id": saved.id,
+                "anomaly_count": len(anomalies),
+                "anomaly_details": anomalies
+            }
+        else:
+            print(f"  ✓ 카테고리 분포 정상")
             return {"anomaly_detected": False}
     
     def send_notification_node(self, state: AgentState) -> Dict[str, Any]:

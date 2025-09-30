@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 
 import { useMetrics, useScanTableAnomalies, useTableAnomalies } from '@/features/metrics/hooks'
-import { type TableAnomalyDetection } from '@/features/metrics/types'
+import { type AnomalyDetail, type TableAnomalyDetection } from '@/features/metrics/types'
 import { formatUTCToKST } from '@/lib/utils'
 
 interface TableAnomalyDetectionProps {
@@ -32,6 +32,8 @@ export function TableAnomalyDetection({ className = '' }: TableAnomalyDetectionP
   }, [metricsData])
 
   const [selectedTable, setSelectedTable] = useState(() => monitoredTables[0] ?? '')
+  const [selectedAnomaly, setSelectedAnomaly] = useState<TableAnomalyDetection | null>(null)
+  const [showDetailsModal, setShowDetailsModal] = useState(false)
 
   useEffect(() => {
     if (monitoredTables.length > 0 && !monitoredTables.includes(selectedTable)) {
@@ -49,6 +51,18 @@ export function TableAnomalyDetection({ className = '' }: TableAnomalyDetectionP
     } catch (error) {
       console.error('테이블 검사 실패:', error)
     }
+  }
+
+  const handleViewDetails = (anomaly: TableAnomalyDetection) => {
+    console.log('🔍 상세 정보 요청:', anomaly)
+    console.log('📊 anomaly_details:', anomaly.anomaly_details)
+    setSelectedAnomaly(anomaly)
+    setShowDetailsModal(true)
+  }
+
+  const handleCloseModal = () => {
+    setShowDetailsModal(false)
+    setSelectedAnomaly(null)
   }
 
   const getStatusColor = (status: string) => {
@@ -189,7 +203,10 @@ export function TableAnomalyDetection({ className = '' }: TableAnomalyDetectionP
                     <span className="rounded-full bg-white/50 px-2 py-1 text-sm font-bold">
                       {latestAnomaly.null_count}건
                     </span>
-                    <button className="inline-flex cursor-pointer items-center justify-center rounded-lg px-3 py-1.5 text-sm font-medium whitespace-nowrap text-gray-700 opacity-75 transition-colors hover:bg-gray-100 hover:opacity-100 disabled:text-gray-400">
+                    <button
+                      onClick={() => handleViewDetails(latestAnomaly)}
+                      className="inline-flex cursor-pointer items-center justify-center rounded-lg px-3 py-1.5 text-sm font-medium whitespace-nowrap text-gray-700 opacity-75 transition-colors hover:bg-gray-100 hover:opacity-100 disabled:text-gray-400"
+                    >
                       <i className="ri-eye-line"></i>
                     </button>
                   </div>
@@ -209,7 +226,10 @@ export function TableAnomalyDetection({ className = '' }: TableAnomalyDetectionP
                     <span className="rounded-full bg-white/50 px-2 py-1 text-sm font-bold">
                       {latestAnomaly.duplicate_count}건
                     </span>
-                    <button className="inline-flex cursor-pointer items-center justify-center rounded-lg px-3 py-1.5 text-sm font-medium whitespace-nowrap text-gray-700 opacity-75 transition-colors hover:bg-gray-100 hover:opacity-100 disabled:text-gray-400">
+                    <button
+                      onClick={() => handleViewDetails(latestAnomaly)}
+                      className="inline-flex cursor-pointer items-center justify-center rounded-lg px-3 py-1.5 text-sm font-medium whitespace-nowrap text-gray-700 opacity-75 transition-colors hover:bg-gray-100 hover:opacity-100 disabled:text-gray-400"
+                    >
                       <i className="ri-eye-line"></i>
                     </button>
                   </div>
@@ -296,6 +316,116 @@ export function TableAnomalyDetection({ className = '' }: TableAnomalyDetectionP
           매 시간마다 자동으로 데이터 이상치를 검사합니다.
         </p>
       </div>
+
+      {/* 상세 정보 모달 */}
+      {showDetailsModal && selectedAnomaly && (
+        <div className="bg-opacity-50 fixed inset-0 z-50 flex items-center justify-center bg-black">
+          <div className="max-h-[80vh] w-full max-w-4xl overflow-y-auto rounded-lg bg-white p-6 shadow-xl">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900">
+                이상치 상세 정보 - {selectedAnomaly.table_name}
+              </h3>
+              <button
+                onClick={handleCloseModal}
+                className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+              >
+                <i className="ri-close-line text-xl"></i>
+              </button>
+            </div>
+
+            {/* 요약 정보 */}
+            <div className="mb-6 grid grid-cols-2 gap-4 rounded-lg bg-gray-50 p-4">
+              <div>
+                <span className="text-sm text-gray-600">총 레코드</span>
+                <p className="text-lg font-semibold">{selectedAnomaly.total_records}개</p>
+              </div>
+              <div>
+                <span className="text-sm text-gray-600">이상치 수</span>
+                <p className="text-lg font-semibold text-red-600">
+                  {selectedAnomaly.anomaly_count}개
+                </p>
+              </div>
+              <div>
+                <span className="text-sm text-gray-600">NULL 값</span>
+                <p className="text-lg font-semibold">{selectedAnomaly.null_count}개</p>
+              </div>
+              <div>
+                <span className="text-sm text-gray-600">중복 데이터</span>
+                <p className="text-lg font-semibold">{selectedAnomaly.duplicate_count}개</p>
+              </div>
+            </div>
+
+            {/* 상세 이상치 정보 */}
+            {selectedAnomaly.anomaly_details && selectedAnomaly.anomaly_details.length > 0 ? (
+              <div className="space-y-4">
+                <h4 className="text-md font-medium text-gray-900">상세 이상치 내역</h4>
+                {selectedAnomaly.anomaly_details.map((detail: AnomalyDetail, index: number) => (
+                  <div key={index} className="rounded-lg border border-gray-200 p-4">
+                    <div className="mb-2 flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <span
+                          className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
+                            detail.severity === 'high'
+                              ? 'bg-red-100 text-red-800'
+                              : detail.severity === 'medium'
+                                ? 'bg-yellow-100 text-yellow-800'
+                                : 'bg-green-100 text-green-800'
+                          }`}
+                        >
+                          {detail.severity === 'high'
+                            ? '높음'
+                            : detail.severity === 'medium'
+                              ? '중간'
+                              : '낮음'}
+                        </span>
+                        <span className="text-sm font-medium text-gray-900">
+                          {detail.type === 'null_values'
+                            ? 'NULL 값'
+                            : detail.type === 'duplicates'
+                              ? '중복 데이터'
+                              : detail.type === 'distribution_anomaly'
+                                ? '분포 이상치'
+                                : '기타'}
+                        </span>
+                      </div>
+                      <span className="text-sm text-gray-500">{detail.count}건</span>
+                    </div>
+
+                    <p className="mb-2 text-sm text-gray-700">{detail.description}</p>
+
+                    {detail.column && (
+                      <p className="text-xs text-gray-500">컬럼: {detail.column}</p>
+                    )}
+
+                    {detail.value && <p className="text-xs text-gray-500">값: {detail.value}</p>}
+
+                    {detail.percentage && (
+                      <p className="text-xs text-gray-500">비율: {detail.percentage}%</p>
+                    )}
+
+                    {/* 샘플 데이터 */}
+                    {detail.sample_data && detail.sample_data.length > 0 && (
+                      <div className="mt-3">
+                        <p className="mb-2 text-xs font-medium text-gray-600">샘플 데이터:</p>
+                        <div className="max-h-32 overflow-y-auto rounded border bg-gray-50 p-2">
+                          <pre className="text-xs text-gray-700">
+                            {JSON.stringify(detail.sample_data, null, 2)}
+                          </pre>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center text-gray-500">
+                <i className="ri-information-line mb-2 text-4xl"></i>
+                <p>상세 정보가 없습니다</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

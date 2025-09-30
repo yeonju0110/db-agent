@@ -135,8 +135,8 @@ async def execute_sql(
             result_type=result_type,
             result_value=result_value,
             result_data=result_data,
-            execution_time_ms=0,  # TODO: 실제 실행 시간 측정
-            tables_used=[]  # TODO: 사용된 테이블 추출
+            execution_time_ms=result.get('execution_time_ms', 0),
+            tables_used=[]  # 직접 실행에서는 테이블 정보 없음
         )
         
     except HTTPException:

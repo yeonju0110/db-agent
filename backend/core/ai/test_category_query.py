@@ -14,7 +14,7 @@ from backend.models.monitoring import MonitoringMetric, ThresholdConfig
 # 테스트용 지표 생성
 repository = get_repository()
 
-# 카테고리형 지표: 주문 상태별 개수
+# 카테고리형 지표: 주문 상태별 개수 (상대적 이상치 감지 테스트)
 test_metric = MonitoringMetric(
     name="테스트: 주문 상태별 분포",
     natural_query="주문 상태별 건수를 알려줘",
