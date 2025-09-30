@@ -1,0 +1,37 @@
+<!-- D 로고 (SVG) -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200" role="img" aria-labelledby="title desc">
+  <title id="title">Letter D Logo</title>
+  <desc id="desc">Rounded D-shaped logo with gradient and subtle shadow</desc>
+
+  <!-- 정의: 그라데이션 + 마스크 -->
+  <defs>
+    <linearGradient id="g" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#4F46E5"/>
+      <stop offset="100%" stop-color="#06B6D4"/>
+    </linearGradient>
+
+    <!-- 내부 원을 투명하게 만들어 D 자 형태를 만드는 마스크 -->
+    <mask id="cutD" maskUnits="userSpaceOnUse">
+      <!-- 배경 흰색(보이게) -->
+      <rect x="0" y="0" width="200" height="200" fill="white"/>
+      <!-- 이 원 부분은 투명(검정)으로 처리되어 잘려나감 -->
+      <circle cx="120" cy="100" r="55" fill="black"/>
+    </mask>
+
+    <!-- 부드러운 그림자용 필터 -->
+    <filter id="softShadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#000" flood-opacity="0.15"/>
+    </filter>
+  </defs>
+
+  <!-- 그림자 -->
+  <g filter="url(#softShadow)">
+    <!-- 둥근 직사각형 (D의 전체 외형) -->
+    <rect x="30" y="30" width="120" height="140" rx="60" ry="60"
+          fill="url(#g)" mask="url(#cutD)"/>
+  </g>
+
+  <!-- 외곽 라인 (선명하게 보이도록) -->
+  <rect x="30" y="30" width="120" height="140" rx="60" ry="60
+        " fill="none" stroke="#0F172A" stroke-opacity="0.08" stroke-width="2" mask="url(#cutD)"/>
+</svg>
