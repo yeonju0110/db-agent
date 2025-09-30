@@ -58,16 +58,22 @@ async def test_scheduler_service():
     try:
         result = await scheduler_service.execute_metric_now(saved_metric.id)
         print(f"   실행 결과: {result}")
-    except Exception as e:
+    except (RuntimeError, ValueError) as e:
         print(f"   실행 실패 (예상됨): {e}")
+    except Exception as e:
+        print(f"   예상치 못한 오류: {e}")
+        raise
     
     # 5. 모든 지표 실행 테스트
     print("\n5. 모든 지표 실행 테스트")
     try:
         result = await scheduler_service.execute_all_metrics_now()
         print(f"   실행 결과: {result}")
-    except Exception as e:
+    except (RuntimeError, ValueError) as e:
         print(f"   실행 실패 (예상됨): {e}")
+    except Exception as e:
+        print(f"   예상치 못한 오류: {e}")
+        raise
     
     # 6. 스케줄러 상태 재확인
     print("\n6. 스케줄러 상태 재확인")
@@ -132,8 +138,11 @@ async def test_scheduler_api():
             else:
                 print(f"   헬스체크 실패: {response.status_code}")
             
-        except Exception as e:
+        except (httpx.ConnectError, httpx.TimeoutException) as e:
             print(f"   API 테스트 실패 (서버가 실행 중이지 않을 수 있음): {e}")
+        except Exception as e:
+            print(f"   예상치 못한 오류: {e}")
+            raise
     
     print("\n✅ 스케줄러 API 테스트 완료")
 
@@ -154,6 +163,7 @@ async def main():
         print(f"\n❌ 테스트 실패: {e}")
         import traceback
         traceback.print_exc()
+        raise
 
 
 if __name__ == "__main__":

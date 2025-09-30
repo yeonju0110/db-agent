@@ -202,6 +202,7 @@ async def start_setup(connection_id: str, x_tenant_id: str = Header(..., descrip
     ]
     
     setup_status = SetupStatus(
+        tenant_id=x_tenant_id,
         connection_id=connection_id,
         status="running",
         steps=steps,
@@ -209,7 +210,7 @@ async def start_setup(connection_id: str, x_tenant_id: str = Header(..., descrip
         total_steps=len(steps)
     )
     
-    set_setup_status(connection_id, setup_status)
+    set_setup_status(x_tenant_id, connection_id, setup_status)
     
     # 백그라운드에서 설정 실행 (실제로는 별도 스레드나 큐에서 실행)
     import asyncio
@@ -240,7 +241,7 @@ async def get_setup_status_endpoint(
     x_tenant_id: str = Header(..., description="고객사 ID")
 ):
     """설정 진행 상태 조회"""
-    setup_status = get_setup_status(connection_id)
+    setup_status = get_setup_status(x_tenant_id, connection_id)
     if not setup_status:
         raise HTTPException(status_code=404, detail="설정 상태를 찾을 수 없습니다")
     
@@ -273,7 +274,7 @@ async def get_setup_status_endpoint(
 async def run_setup_pipeline(connection_id: str, x_tenant_id: str = "default_tenant"):
     """설정 파이프라인 실행 (백그라운드)"""
     print(f"🚀 설정 파이프라인 시작: {connection_id}")
-    setup_status = get_setup_status(connection_id)
+    setup_status = get_setup_status(x_tenant_id, connection_id)
     if not setup_status:
         print(f"❌ 설정 상태를 찾을 수 없음: {connection_id}")
         return
@@ -281,63 +282,63 @@ async def run_setup_pipeline(connection_id: str, x_tenant_id: str = "default_ten
     try:
         # 1. 연결 테스트
         print(f"📋 1단계: 연결 테스트 시작")
-        await update_step_status(connection_id, 0, "running", "DB 연결을 확인합니다...")
+        await update_step_status(x_tenant_id, connection_id, 0, "running", "DB 연결을 확인합니다...")
         test_result = await test_connection_internal(connection_id, x_tenant_id)
         print(f"📋 1단계 결과: {test_result}")
         if not test_result["success"]:
-            await update_step_status(connection_id, 0, "error", "연결 테스트 실패", test_result["error"])
-            await update_setup_status(connection_id, "error")
+            await update_step_status(x_tenant_id, connection_id, 0, "error", "연결 테스트 실패", test_result["error"])
+            await update_setup_status(x_tenant_id, connection_id, "error")
             return
-        await update_step_status(connection_id, 0, "success", "연결 테스트 완료")
+        await update_step_status(x_tenant_id, connection_id, 0, "success", "연결 테스트 완료")
         
         # 2. 스키마 추출
-        await update_step_status(connection_id, 1, "running", "스키마를 추출합니다...")
+        await update_step_status(x_tenant_id, connection_id, 1, "running", "스키마를 추출합니다...")
         schema_result = await extract_schema(connection_id, x_tenant_id)
         if not schema_result["success"]:
-            await update_step_status(connection_id, 1, "error", "스키마 추출 실패", schema_result["error"])
-            await update_setup_status(connection_id, "error")
+            await update_step_status(x_tenant_id, connection_id, 1, "error", "스키마 추출 실패", schema_result["error"])
+            await update_setup_status(x_tenant_id, connection_id, "error")
             return
-        await update_step_status(connection_id, 1, "success", "스키마 추출 완료")
+        await update_step_status(x_tenant_id, connection_id, 1, "success", "스키마 추출 완료")
         
         # 3. AI 초안 생성
-        await update_step_status(connection_id, 2, "running", "AI로 비즈니스 컨텍스트를 생성합니다...")
+        await update_step_status(x_tenant_id, connection_id, 2, "running", "AI로 비즈니스 컨텍스트를 생성합니다...")
         ai_result = await generate_business_context(connection_id, x_tenant_id)
         if not ai_result["success"]:
-            await update_step_status(connection_id, 2, "error", "AI 초안 생성 실패", ai_result["error"])
-            await update_setup_status(connection_id, "error")
+            await update_step_status(x_tenant_id, connection_id, 2, "error", "AI 초안 생성 실패", ai_result["error"])
+            await update_setup_status(x_tenant_id, connection_id, "error")
             return
-        await update_step_status(connection_id, 2, "success", "AI 초안 생성 완료")
+        await update_step_status(x_tenant_id, connection_id, 2, "success", "AI 초안 생성 완료")
         
         # 4. 컨텍스트 적용
-        await update_step_status(connection_id, 3, "running", "비즈니스 컨텍스트를 적용합니다...")
+        await update_step_status(x_tenant_id, connection_id, 3, "running", "비즈니스 컨텍스트를 적용합니다...")
         context_result = await apply_business_context(connection_id, x_tenant_id)
         if not context_result["success"]:
-            await update_step_status(connection_id, 3, "error", "컨텍스트 적용 실패", context_result["error"])
-            await update_setup_status(connection_id, "error")
+            await update_step_status(x_tenant_id, connection_id, 3, "error", "컨텍스트 적용 실패", context_result["error"])
+            await update_setup_status(x_tenant_id, connection_id, "error")
             return
-        await update_step_status(connection_id, 3, "success", "컨텍스트 적용 완료")
+        await update_step_status(x_tenant_id, connection_id, 3, "success", "컨텍스트 적용 완료")
         
         # 5. 검색 인덱싱
-        await update_step_status(connection_id, 4, "running", "Azure AI Search에 인덱싱합니다...")
+        await update_step_status(x_tenant_id, connection_id, 4, "running", "Azure AI Search에 인덱싱합니다...")
         index_result = await index_to_ai_search(connection_id, x_tenant_id)
         if not index_result["success"]:
-            await update_step_status(connection_id, 4, "error", "인덱싱 실패", index_result["error"])
-            await update_setup_status(connection_id, "error")
+            await update_step_status(x_tenant_id, connection_id, 4, "error", "인덱싱 실패", index_result["error"])
+            await update_setup_status(x_tenant_id, connection_id, "error")
             return
-        await update_step_status(connection_id, 4, "success", "인덱싱 완료")
+        await update_step_status(x_tenant_id, connection_id, 4, "success", "인덱싱 완료")
         
         # 전체 완료
         print(f"✅ 설정 파이프라인 완료: {connection_id}")
-        await update_setup_status(connection_id, "success")
+        await update_setup_status(x_tenant_id, connection_id, "success")
         
     except Exception as e:
         print(f"❌ 설정 파이프라인 오류: {e}")
-        await update_setup_status(connection_id, "error")
+        await update_setup_status(x_tenant_id, connection_id, "error")
 
 
-async def update_step_status(connection_id: str, step_index: int, status: str, message: str, error_details: str = None):
+async def update_step_status(tenant_id: str, connection_id: str, step_index: int, status: str, message: str, error_details: str = None):
     """단계 상태 업데이트"""
-    setup_status = get_setup_status(connection_id)
+    setup_status = get_setup_status(tenant_id, connection_id)
     if setup_status and 0 <= step_index < len(setup_status.steps):
         step = setup_status.steps[step_index]
         step.status = status
@@ -350,17 +351,17 @@ async def update_step_status(connection_id: str, step_index: int, status: str, m
             step.completed_at = datetime.utcnow()
         
         setup_status.current_step = step_index
-        set_setup_status(connection_id, setup_status)
+        set_setup_status(tenant_id, connection_id, setup_status)
 
 
-async def update_setup_status(connection_id: str, status: str):
+async def update_setup_status(tenant_id: str, connection_id: str, status: str):
     """전체 설정 상태 업데이트"""
-    setup_status = get_setup_status(connection_id)
+    setup_status = get_setup_status(tenant_id, connection_id)
     if setup_status:
         setup_status.status = status
         if status in ["success", "error"]:
             setup_status.completed_at = datetime.utcnow()
-        set_setup_status(connection_id, setup_status)
+        set_setup_status(tenant_id, connection_id, setup_status)
 
 
 # 서비스 임포트

@@ -4,6 +4,7 @@ from datetime import datetime
 import sys
 from pathlib import Path
 import psycopg2
+from psycopg2 import sql
 
 # 프로젝트 루트 추가
 project_root = Path(__file__).parent.parent.parent.parent
@@ -71,8 +72,11 @@ class TableAnomalyService:
     async def get_anomaly_details(self, detection_id: str, tenant_id: str = "default") -> List[Dict[str, Any]]:
         """이상치 상세 정보 조회"""
         try:
-            query = "SELECT * FROM c WHERE c.type = 'table_anomaly_detail' AND c.anomaly_detection_id = @detection_id"
-            parameters = [{"name": "@detection_id", "value": detection_id}]
+            query = "SELECT * FROM c WHERE c.type = 'table_anomaly_detail' AND c.anomaly_detection_id = @detection_id AND c.tenant_id = @tenant_id"
+            parameters = [
+                {"name": "@detection_id", "value": detection_id},
+                {"name": "@tenant_id", "value": tenant_id}
+            ]
             
             items = self.db_repository.container.query_items(
                 query=query,
@@ -89,8 +93,11 @@ class TableAnomalyService:
         """이상치 확인 처리"""
         try:
             # 이상치 검사 결과 업데이트
-            query = "SELECT * FROM c WHERE c.id = @detection_id AND c.type = 'table_anomaly_detection'"
-            parameters = [{"name": "@detection_id", "value": detection_id}]
+            query = "SELECT * FROM c WHERE c.id = @detection_id AND c.type = 'table_anomaly_detection' AND c.tenant_id = @tenant_id"
+            parameters = [
+                {"name": "@detection_id", "value": detection_id},
+                {"name": "@tenant_id", "value": tenant_id}
+            ]
             
             items = list(self.db_repository.container.query_items(
                 query=query,
@@ -116,9 +123,12 @@ class TableAnomalyService:
     async def get_anomaly_summary(self, tenant_id: str = "default") -> Dict[str, Any]:
         """이상치 요약 정보"""
         try:
-            query = "SELECT * FROM c WHERE c.type = 'table_anomaly_detection'"
+            query = "SELECT * FROM c WHERE c.type = 'table_anomaly_detection' AND c.tenant_id = @tenant_id"
+            parameters = [{"name": "@tenant_id", "value": tenant_id}]
+            
             items = list(self.db_repository.container.query_items(
                 query=query,
+                parameters=parameters,
                 enable_cross_partition_query=True
             ))
             
@@ -240,8 +250,11 @@ class TableAnomalyService:
     async def delete_table_anomalies(self, table_name: str, tenant_id: str = "default") -> int:
         """특정 테이블의 모든 이상치 검사 결과 삭제"""
         try:
-            query = "SELECT * FROM c WHERE c.type = 'table_anomaly_detection' AND c.table_name = @table_name"
-            parameters = [{"name": "@table_name", "value": table_name}]
+            query = "SELECT * FROM c WHERE c.type = 'table_anomaly_detection' AND c.table_name = @table_name AND c.tenant_id = @tenant_id"
+            parameters = [
+                {"name": "@table_name", "value": table_name},
+                {"name": "@tenant_id", "value": tenant_id}
+            ]
             
             items = list(self.db_repository.container.query_items(
                 query=query,
@@ -345,13 +358,13 @@ class TableAnomalyDetector:
         """총 레코드 수 조회"""
         try:
             with conn.cursor() as cursor:
-                # 스키마명이 포함된 테이블명 사용 (예: public.orders)
-                query = f"SELECT COUNT(*) FROM public.{table_name}"
-                print(f"[DEBUG] Executing query: {query}")
+                # SQL 인젝션 방지를 위해 psycopg2.sql 사용
+                query = sql.SQL("SELECT COUNT(*) FROM {}.{}").format(
+                    sql.Identifier("public"), sql.Identifier(table_name)
+                )
                 cursor.execute(query)
                 result = cursor.fetchone()
                 count = result[0] if result else 0
-                print(f"[DEBUG] Table {table_name} has {count} records")
                 return count
         except Exception as e:
             print(f"Error getting total records for {table_name}: {e}")
@@ -376,7 +389,12 @@ class TableAnomalyDetector:
                 null_count = 0
                 for column_name, data_type, is_nullable in columns:
                     if is_nullable == 'NO':  # NOT NULL 컬럼
-                        cursor.execute(f"SELECT COUNT(*) FROM public.{table_name} WHERE {column_name} IS NULL")
+                        q = sql.SQL("SELECT COUNT(*) FROM {}.{} WHERE {} IS NULL").format(
+                            sql.Identifier("public"),
+                            sql.Identifier(table_name),
+                            sql.Identifier(column_name),
+                        )
+                        cursor.execute(q)
                         result = cursor.fetchone()
                         if result:
                             null_count += result[0]
@@ -406,11 +424,11 @@ class TableAnomalyDetector:
                     return 0
                 
                 # Primary Key 기준으로 중복 검사
-                pk_columns_str = ', '.join(pk_columns)
-                cursor.execute(f"""
-                    SELECT COUNT(*) - COUNT(DISTINCT {pk_columns_str}) 
-                    FROM public.{table_name}
-                """)
+                cols = sql.SQL(", ").join(sql.Identifier(c) for c in pk_columns)
+                q = sql.SQL("SELECT COUNT(*) - COUNT(DISTINCT ({})) FROM {}.{}").format(
+                    cols, sql.Identifier("public"), sql.Identifier(table_name)
+                )
+                cursor.execute(q)
                 result = cursor.fetchone()
                 return max(0, result[0]) if result else 0
                 

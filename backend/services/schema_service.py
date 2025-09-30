@@ -3,6 +3,7 @@
 기존 export_schema.py 로직을 서비스로 변환
 """
 import json
+import logging
 import os
 import time
 from pathlib import Path
@@ -12,6 +13,8 @@ from dataclasses import dataclass, asdict
 from datetime import datetime
 
 from backend.models.db_connection import DbConnection
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -101,10 +104,17 @@ class SchemaService:
                 "table_count": len(cards)
             }
             
-        except Exception as e:
+        except psycopg2.Error as e:
+            logger.exception("데이터베이스 오류가 발생했습니다")
             return {
                 "success": False,
-                "error": str(e)
+                "error": "데이터베이스 연결 또는 쿼리 실행 중 오류가 발생했습니다."
+            }
+        except Exception as e:
+            logger.exception("스키마 추출 중 예상치 못한 오류가 발생했습니다")
+            return {
+                "success": False,
+                "error": "내부 서버 오류가 발생했습니다."
             }
     
     def _fetch_tables(self, conn) -> List[Tuple[str, str, str]]:

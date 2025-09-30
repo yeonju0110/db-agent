@@ -81,7 +81,8 @@ class CosmosDBRepository:
     
     def list_metrics(
         self,
-        status: Optional[MetricStatus] = None
+        status: Optional[MetricStatus] = None,
+        tenant_id: Optional[str] = None
     ) -> List[MonitoringMetric]:
         """지표 목록"""
         query = "SELECT * FROM c ORDER BY c.created_at DESC"
@@ -90,6 +91,14 @@ class CosmosDBRepository:
         if status:
             query = "SELECT * FROM c WHERE c.status = @status ORDER BY c.created_at DESC"
             parameters = [{"name": "@status", "value": status.value}]
+        
+        if tenant_id:
+            if parameters:
+                query = query.replace("WHERE", "WHERE c.tenant_id = @tenant_id AND")
+                parameters.append({"name": "@tenant_id", "value": tenant_id})
+            else:
+                query = "SELECT * FROM c WHERE c.tenant_id = @tenant_id ORDER BY c.created_at DESC"
+                parameters = [{"name": "@tenant_id", "value": tenant_id}]
         
         items = list(self.metrics_container.query_items(
             query=query,
@@ -225,7 +234,8 @@ class CosmosDBRepository:
         self,
         metric_id: Optional[str] = None,
         resolved: Optional[bool] = None,
-        limit: int = 100
+        limit: int = 100,
+        tenant_id: Optional[str] = None
     ) -> List[Anomaly]:
         """이상 내역 목록"""
         conditions = []
@@ -239,6 +249,10 @@ class CosmosDBRepository:
             conditions.append("c.resolved = @resolved")
             parameters.append({"name": "@resolved", "value": resolved})
         
+        if tenant_id:
+            conditions.append("c.tenant_id = @tenant_id")
+            parameters.append({"name": "@tenant_id", "value": tenant_id})
+        
         where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
         query = f"SELECT TOP {limit} * FROM c {where_clause} ORDER BY c.detected_at DESC"
         
@@ -249,6 +263,39 @@ class CosmosDBRepository:
         ))
         
         return [self._item_to_anomaly(item) for item in items]
+    
+    def count_anomalies(
+        self,
+        metric_id: Optional[str] = None,
+        resolved: Optional[bool] = None,
+        tenant_id: Optional[str] = None
+    ) -> int:
+        """이상 내역 개수 조회 (효율적인 COUNT 쿼리)"""
+        conditions = []
+        parameters = []
+        
+        if metric_id:
+            conditions.append("c.metric_id = @metric_id")
+            parameters.append({"name": "@metric_id", "value": metric_id})
+        
+        if resolved is not None:
+            conditions.append("c.resolved = @resolved")
+            parameters.append({"name": "@resolved", "value": resolved})
+        
+        if tenant_id:
+            conditions.append("c.tenant_id = @tenant_id")
+            parameters.append({"name": "@tenant_id", "value": tenant_id})
+        
+        where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+        query = f"SELECT VALUE COUNT(1) FROM c {where_clause}"
+        
+        items = list(self.anomalies_container.query_items(
+            query=query,
+            parameters=parameters,
+            enable_cross_partition_query=True
+        ))
+        
+        return items[0] if items else 0
     
     # ===== DBConnection CRUD =====
     

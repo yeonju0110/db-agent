@@ -1,6 +1,7 @@
 from datetime import datetime
 from typing import Dict, List, Optional
-from sqlalchemy import Column, String, Integer, DateTime, Boolean, Text, JSON
+from uuid import uuid4
+from sqlalchemy import Column, String, Integer, DateTime, Boolean, Text, JSON, ForeignKey, Index
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql import func
 
@@ -11,7 +12,7 @@ class TableAnomalyDetection(Base):
     """테이블 이상치 감지 결과"""
     __tablename__ = "table_anomaly_detections"
 
-    id = Column(String, primary_key=True)
+    id = Column(String, primary_key=True, default=lambda: str(uuid4()))
     table_name = Column(String, nullable=False, index=True)
     detected_at = Column(DateTime, default=func.now(), nullable=False)
     total_records = Column(Integer, nullable=False, default=0)
@@ -22,6 +23,12 @@ class TableAnomalyDetection(Base):
     is_acknowledged = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime, default=func.now(), nullable=False)
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now(), nullable=False)
+    
+    __table_args__ = (
+        Index("ix_tad_table_name", "table_name"),
+        Index("ix_tad_detected_at", "detected_at"),
+        Index("ix_tad_status", "status"),
+    )
 
     def to_dict(self) -> Dict:
         return {
@@ -43,8 +50,13 @@ class TableAnomalyDetail(Base):
     """테이블 이상치 상세 정보"""
     __tablename__ = "table_anomaly_details"
 
-    id = Column(String, primary_key=True)
-    anomaly_detection_id = Column(String, nullable=False, index=True)
+    id = Column(String, primary_key=True, default=lambda: str(uuid4()))
+    anomaly_detection_id = Column(
+        String,
+        ForeignKey("table_anomaly_detections.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
     anomaly_type = Column(String, nullable=False)  # null_values, duplicates, data_quality, business_logic
     severity = Column(String, nullable=False, default="low")  # low, medium, high
     count = Column(Integer, nullable=False, default=0)

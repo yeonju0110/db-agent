@@ -2,8 +2,9 @@
 API Request/Response 스키마
 """
 from pydantic import BaseModel, Field
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Literal
 from datetime import datetime
+from backend.models.monitoring import QueryResultType
 
 
 # ===== 지표 관리 =====
@@ -77,7 +78,7 @@ class QueryResponse(BaseModel):
     """즉시 질문 응답"""
     question: str
     sql: str
-    result_type: str  # single_value, multiple_rows
+    result_type: Literal["no_data", "single_value", "multiple_rows"]
     result_value: Optional[Any]
     result_data: Optional[List[Dict[str, Any]]]
     execution_time_ms: Optional[int]
@@ -90,7 +91,7 @@ class HistoryResponse(BaseModel):
     """히스토리 응답"""
     id: str
     executed_at: datetime
-    result_type: str
+    result_type: QueryResultType
     result_value: Optional[Any]
     result_data: Optional[List[Dict[str, Any]]]
     status: str

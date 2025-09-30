@@ -4,7 +4,7 @@
 from fastapi import APIRouter, Header
 import sys
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone
 
 project_root = Path(__file__).parent.parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
@@ -28,15 +28,15 @@ repository = get_repository()
 @router.get("/summary", response_model=DashboardSummaryResponse)
 async def get_summary(x_tenant_id: str = Header(..., description="고객사 ID")):
     """대시보드 요약 정보"""
-    all_metrics = repository.list_metrics()
-    active_metrics = repository.list_metrics(status=MetricStatus.ACTIVE)
-    all_anomalies = repository.list_anomalies(resolved=False)
+    all_metrics = repository.list_metrics(tenant_id=x_tenant_id)
+    active_metrics = repository.list_metrics(status=MetricStatus.ACTIVE, tenant_id=x_tenant_id)
+    total_anomalies = repository.count_anomalies(resolved=False, tenant_id=x_tenant_id)
     
     return DashboardSummaryResponse(
         total_metrics=len(all_metrics),
         active_metrics=len(active_metrics),
-        total_anomalies=len(all_anomalies),
-        last_updated=datetime.utcnow()
+        total_anomalies=total_anomalies,
+        last_updated=datetime.now(timezone.utc)
     )
 
 
@@ -47,7 +47,9 @@ async def get_anomalies(
     x_tenant_id: str = Header(..., description="고객사 ID")
 ):
     """이상징후 목록 조회"""
-    anomalies = repository.list_anomalies(resolved=resolved, limit=limit)
+    anomalies = repository.list_anomalies(resolved=resolved, limit=limit, tenant_id=x_tenant_id)
+    # total도 별도 카운트로 반환 권장
+    total = repository.count_anomalies(resolved=resolved, tenant_id=x_tenant_id)
     
     items = []
     for anomaly in anomalies:
@@ -66,7 +68,7 @@ async def get_anomalies(
         ))
     
     return AnomalyListResponse(
-        total=len(items),
+        total=total,
         items=items
     )
 
@@ -141,8 +143,8 @@ async def get_recommendations(
     recommendations = []
     
     # 실제 지표 상태를 기반으로 권장사항 생성
-    all_metrics = repository.list_metrics()
-    recent_anomalies = repository.list_anomalies(resolved=False, limit=5)
+    all_metrics = repository.list_metrics(tenant_id=x_tenant_id)
+    recent_anomalies = repository.list_anomalies(resolved=False, limit=5, tenant_id=x_tenant_id)
     
     # 1. 이상징후가 많은 경우 성능 최적화 권장
     if len(recent_anomalies) >= 3:
@@ -169,7 +171,7 @@ async def get_recommendations(
     
     # 3. 장기간 실행되지 않은 지표가 있는 경우
     from datetime import datetime, timedelta
-    stale_threshold = datetime.utcnow() - timedelta(hours=2)
+    stale_threshold = datetime.now(timezone.utc) - timedelta(hours=2)
     
     stale_metrics = []
     for metric in all_metrics:

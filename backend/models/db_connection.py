@@ -1,7 +1,7 @@
 """
 DB 연결 모델
 """
-from datetime import datetime
+from datetime import datetime, UTC
 from typing import Optional
 from pydantic import BaseModel, Field
 import uuid
@@ -17,7 +17,7 @@ class DbConnection(BaseModel):
     database: str = Field(..., description="데이터베이스명")
     username: str = Field(..., description="사용자명")
     password: str = Field(..., description="비밀번호 (암호화 필요)")
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     updated_at: Optional[datetime] = None
     status: str = Field(default="inactive", description="연결 상태 (active, inactive, error)")
     last_tested_at: Optional[datetime] = None
@@ -35,9 +35,10 @@ class SetupStep(BaseModel):
 
 class SetupStatus(BaseModel):
     """설정 진행 상태"""
+    tenant_id: str
     connection_id: str
     status: str = "pending"  # pending, running, success, error
-    steps: list[SetupStep] = []
+    steps: list[SetupStep] = Field(default_factory=list)
     started_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
     current_step: int = 0
@@ -48,16 +49,16 @@ class SetupStatus(BaseModel):
 _setup_statuses: dict[str, SetupStatus] = {}
 
 
-def get_setup_status(connection_id: str) -> Optional[SetupStatus]:
+def get_setup_status(tenant_id: str, connection_id: str) -> Optional[SetupStatus]:
     """설정 상태 조회"""
-    return _setup_statuses.get(connection_id)
+    return _setup_statuses.get(f"{tenant_id}:{connection_id}")
 
 
-def set_setup_status(connection_id: str, status: SetupStatus) -> None:
+def set_setup_status(tenant_id: str, connection_id: str, status: SetupStatus) -> None:
     """설정 상태 저장"""
-    _setup_statuses[connection_id] = status
+    _setup_statuses[f"{tenant_id}:{connection_id}"] = status
 
 
-def clear_setup_status(connection_id: str) -> None:
+def clear_setup_status(tenant_id: str, connection_id: str) -> None:
     """설정 상태 삭제"""
-    _setup_statuses.pop(connection_id, None)
+    _setup_statuses.pop(f"{tenant_id}:{connection_id}", None)

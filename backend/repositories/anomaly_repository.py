@@ -15,13 +15,14 @@ class AnomalyRepository:
         
         # Cosmos DB 연결 설정
         self.cosmos_endpoint = settings.cosmos_endpoint or os.getenv("COSMOS_ENDPOINT")
-        self.cosmos_key = settings.cosmos_key or os.getenv("COSMOS_KEY")
+        cosmos_key = settings.cosmos_key.get_secret_value() if settings.cosmos_key else os.getenv("COSMOS_KEY")
         self.database_name = settings.cosmos_database or os.getenv("COSMOS_DATABASE", "db-monitoring")
         self.container_name = "anomalies"
         
-        if not self.cosmos_endpoint or not self.cosmos_key:
+        if not self.cosmos_endpoint or not cosmos_key:
             raise ValueError("Cosmos DB 연결 정보가 설정되지 않았습니다.")
         
+        self.cosmos_key = cosmos_key
         # Cosmos DB 클라이언트 생성
         self.client = CosmosClient(self.cosmos_endpoint, self.cosmos_key)
         

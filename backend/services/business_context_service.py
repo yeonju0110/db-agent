@@ -25,8 +25,12 @@ class BusinessContextService:
         # Azure OpenAI 클라이언트 초기화
         from backend.config.settings import settings
         
+        api_key = settings.azure_openai_api_key.get_secret_value() if settings.azure_openai_api_key else os.getenv("AZURE_OPENAI_API_KEY")
+        if not api_key:
+            raise ValueError("Azure OpenAI API key is required")
+        
         self.client = AzureOpenAI(
-            api_key=settings.azure_openai_api_key or os.getenv("AZURE_OPENAI_API_KEY"),
+            api_key=api_key,
             azure_endpoint=settings.azure_openai_endpoint or os.getenv("AZURE_OPENAI_ENDPOINT"),
             api_version=settings.azure_openai_api_version or os.getenv("AZURE_OPENAI_API_VERSION", "2024-12-01-preview")
         )
@@ -72,12 +76,10 @@ class BusinessContextService:
         """개별 테이블의 비즈니스 컨텍스트 생성"""
         try:
             # 컬럼 정보 요약
-            columns_summary = ', '.join([
-                f"{c['name']}({c['data_type']})" 
-                for c in table_card['columns'][:10]  # 최대 10개만
-            ])
-            if len(table_card['columns']) > 10:
-                columns_summary += f" ... 외 {len(table_card['columns']) - 10}개"
+            cols = table_card.get('columns', [])
+            columns_summary = ', '.join(f"{c.get('name','?')}({c.get('data_type','?')})" for c in cols[:10])
+            if len(cols) > 10:
+                columns_summary += f" ... 외 {len(cols) - 10}개"
             
             prompt = f"""
 다음 이커머스 데이터베이스 테이블에 대한 비즈니스 컨텍스트를 생성해주세요.
@@ -147,7 +149,10 @@ class BusinessContextService:
                 }
             
             with context_file.open('r', encoding='utf-8') as f:
-                context_data = yaml.safe_load(f)
+                context_data = yaml.safe_load(f) or {}
+            
+            if not isinstance(context_data, dict):
+                return {"success": False, "error": "비즈니스 컨텍스트 YAML 형식 오류(최상위는 매핑이어야 함)."}
             
             # 스키마 파일들에 비즈니스 컨텍스트 적용
             schema_dir = self.output_dir / "schema" / f"postgres_{connection.database}" / "tables"
@@ -160,12 +165,14 @@ class BusinessContextService:
                 table_name = table_data['name']
                 if table_name in context_data:
                     # 비즈니스 컨텍스트 적용
-                    table_data['business_purpose'] = context_data[table_name].get('description', '')
-                    table_data['business_tags'] = context_data[table_name].get('tags', [])
-                    table_data['common_queries'] = context_data[table_name].get('common_queries', [])
-                    table_data['business_terms'] = context_data[table_name].get('business_terms', {})
-                    table_data['kpi_columns'] = context_data[table_name].get('kpi_columns', {})
-                    table_data['column_meanings'] = context_data[table_name].get('column_meanings', {})
+                    ctx = context_data[table_name]
+                    table_data['business_description'] = ctx.get('description', '')
+                    table_data['business_purpose'] = ctx.get('purpose', '')
+                    table_data['business_tags'] = ctx.get('tags', [])
+                    table_data['common_queries'] = ctx.get('common_queries', [])
+                    table_data['business_terms'] = ctx.get('business_terms', {})
+                    table_data['kpi_columns'] = ctx.get('kpi_columns', {})
+                    table_data['column_meanings'] = ctx.get('column_meanings', {})
                     
                     # 파일 저장
                     with json_file.open('w', encoding='utf-8') as f:

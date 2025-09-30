@@ -21,7 +21,7 @@ from backend.repositories.monitoring_repository import get_repository
 from backend.models.monitoring import MonitoringMetric, ThresholdConfig, MetricStatus
 from backend.core.ai.agent_graph import create_agent_graph
 from backend.services.scheduler_service import get_scheduler_service
-from datetime import datetime
+from datetime import datetime, timezone
 
 router = APIRouter(prefix="/api/metrics", tags=["metrics"])
 repository = get_repository()
@@ -90,7 +90,7 @@ async def create_metric(
         # SQL 캐싱
         if result.get('generated_sql') and not result.get('error'):
             saved.sql_query = result['generated_sql']
-            saved.sql_generated_at = datetime.utcnow()
+            saved.sql_generated_at = datetime.now(timezone.utc)
             repository.update_metric(saved.id, saved)
     except Exception as e:
         # SQL 생성 실패해도 지표는 생성됨 (스케줄러에서 재시도)
@@ -110,12 +110,11 @@ async def create_metric(
 
 @router.get("", response_model=MetricListResponse)
 async def list_metrics(
-    status: Optional[str] = None,
+    status: Optional[MetricStatus] = None,
     x_tenant_id: str = Header(..., description="고객사 ID")
 ):
     """지표 목록 조회"""
-    metric_status = MetricStatus(status) if status else None
-    metrics = repository.list_metrics(status=metric_status)
+    metrics = repository.list_metrics(status=status)
     
     items = []
     for m in metrics:

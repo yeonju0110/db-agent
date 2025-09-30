@@ -19,7 +19,8 @@ class DbConnectionRepository:
     def __init__(self):
         # Cosmos DB 연결 설정 (기존 환경변수 키 사용)
         self.cosmos_endpoint = settings.cosmos_endpoint or os.getenv("COSMOS_ENDPOINT")
-        self.cosmos_key = settings.cosmos_key or os.getenv("COSMOS_KEY")
+        cosmos_key = settings.cosmos_key.get_secret_value() if settings.cosmos_key else os.getenv("COSMOS_KEY")
+        self.cosmos_key = cosmos_key
         self.database_name = settings.cosmos_database or os.getenv("COSMOS_DATABASE", "db-monitoring")
         self.container_name = "db-connections"
         
@@ -33,10 +34,11 @@ class DbConnectionRepository:
         self._ensure_database_and_container()
         
         # 암호화 키 설정
-        self.encryption_key = settings.db_connection_encryption_key or os.getenv("DB_CONNECTION_ENCRYPTION_KEY")
-        if not self.encryption_key:
+        encryption_key = settings.db_connection_encryption_key.get_secret_value() if settings.db_connection_encryption_key else os.getenv("DB_CONNECTION_ENCRYPTION_KEY")
+        if not encryption_key:
             # 개발용 키 생성 (실제로는 안전한 키 관리 필요)
-            self.encryption_key = Fernet.generate_key()
+            encryption_key = Fernet.generate_key()
+        self.encryption_key = encryption_key
         self.cipher = Fernet(self.encryption_key)
     
     def _ensure_database_and_container(self):
@@ -236,7 +238,7 @@ class DbConnectionRepository:
         """DB 연결 테스트"""
         connection = self.get_connection(connection_id, tenant_id)
         if not connection:
-            return {"success": False, "error": "연결을 찾을 수 없습니다"}
+            return {"success": False, "message": "연결을 찾을 수 없습니다"}
         
         try:
             import psycopg2

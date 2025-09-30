@@ -21,12 +21,13 @@ class AISearchService:
         from backend.config.settings import settings
         
         self.search_endpoint = settings.azure_search_endpoint or os.getenv("AZURE_SEARCH_ENDPOINT")
-        self.search_key = settings.azure_search_api_key or os.getenv("AZURE_SEARCH_KEY")
+        search_key = settings.azure_search_api_key.get_secret_value() if settings.azure_search_api_key else os.getenv("AZURE_SEARCH_KEY")
         self.index_name = settings.azure_search_index_name or os.getenv("AZURE_SEARCH_INDEX_NAME", "dbschema-tables")
         
-        if not self.search_endpoint or not self.search_key:
+        if not self.search_endpoint or not search_key:
             raise ValueError("Azure Search 설정이 필요합니다. AZURE_SEARCH_ENDPOINT, AZURE_SEARCH_KEY를 설정하세요.")
         
+        self.search_key = search_key
         self.credential = AzureKeyCredential(self.search_key)
         self.client = SearchClient(
             endpoint=self.search_endpoint,

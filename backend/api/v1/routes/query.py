@@ -13,6 +13,7 @@ from backend.api.v1.schemas.requests import QueryRequest, QueryResponse
 from backend.core.ai.agent_graph import create_agent_graph
 from backend.core.ai.sql_executor import SQLExecutor
 from backend.core.ai.schema_retriever import SchemaRetriever
+from backend.models.monitoring import QueryResultType
 
 router = APIRouter(prefix="/api/query", tags=["query"])
 
@@ -60,15 +61,15 @@ async def execute_query(
         # 결과 유형 판별
         data = query_result.get('data', [])
         if not data:
-            result_type = "no_data"
+            result_type = QueryResultType.NO_DATA
             result_value = None
             result_data = None
         elif len(data) == 1 and len(data[0]) == 1:
-            result_type = "single_value"
+            result_type = QueryResultType.SINGLE_VALUE
             result_value = list(data[0].values())[0]
             result_data = None
         else:
-            result_type = "multiple_rows"
+            result_type = QueryResultType.MULTIPLE_ROWS
             result_value = None
             result_data = data
         
@@ -116,15 +117,15 @@ async def execute_sql(
         # 결과 유형 판별
         data = result.get('data', [])
         if not data:
-            result_type = "no_data"
+            result_type = QueryResultType.NO_DATA
             result_value = None
             result_data = None
         elif len(data) == 1 and len(data[0]) == 1:
-            result_type = "single_value"
+            result_type = QueryResultType.SINGLE_VALUE
             result_value = list(data[0].values())[0]
             result_data = None
         else:
-            result_type = "multiple_rows"
+            result_type = QueryResultType.MULTIPLE_ROWS
             result_value = None
             result_data = data
         

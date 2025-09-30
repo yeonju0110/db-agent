@@ -32,17 +32,28 @@ class MetricScheduler:
     async def start(self):
         """스케줄러 시작"""
         self.running = True
+        self._stop_evt = getattr(self, "_stop_evt", asyncio.Event())
         print(f"[스케줄러] 시작됨 (실행 주기: {self.interval_minutes}분)")
         
         while self.running:
             try:
                 await self.execute_all_metrics()
-                await asyncio.sleep(self.interval_minutes * 60)
+                # interval 동안 대기하되, stop 이벤트 발생 시 즉시 종료
+                try:
+                    await asyncio.wait_for(self._stop_evt.wait(), timeout=self.interval_minutes * 60)
+                    break
+                except asyncio.TimeoutError:
+                    self._stop_evt.clear()
+                    pass
             except KeyboardInterrupt:
                 print("\n[스케줄러] 중지 신호 수신")
                 break
+            except asyncio.CancelledError:
+                # 태스크 취소는 상위로 전파
+                raise
             except Exception as e:
-                print(f"[스케줄러] 오류 발생: {e}")
+                # TODO: 로거로 변경하여 스택 추적 남기기
+                print(f"[스케줄러] 오류 발생: {e!r}")
                 await asyncio.sleep(60)
     
     async def execute_all_metrics(self):
@@ -218,6 +229,8 @@ class MetricScheduler:
     def stop(self):
         """스케줄러 중지"""
         self.running = False
+        if hasattr(self, "_stop_evt"):
+            self._stop_evt.set()
 
 
 async def main():
