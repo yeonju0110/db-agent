@@ -136,9 +136,9 @@ export function useSetupStatus(connectionId: string | undefined, enabled = true)
     queryKey: ['setup-status', connectionId],
     queryFn: () => dbConnectionsApi.getSetupStatus(connectionId!),
     enabled: !!connectionId && enabled,
-    refetchInterval: (data) => {
+    refetchInterval: (query) => {
       // 설정 완료 또는 실패 시 폴링 중단
-      if (data?.status === 'success' || data?.status === 'error') {
+      if (query.state.data?.status === 'success' || query.state.data?.status === 'error') {
         return false
       }
       return 10000 // 10초마다 폴링

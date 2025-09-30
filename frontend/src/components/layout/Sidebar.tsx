@@ -115,10 +115,10 @@ function MetricCard({
           <span
             className={cn(
               'font-medium',
-              metric.change_rate > 0 ? 'text-status-success' : 'text-status-error'
+              Number(metric.change_rate) > 0 ? 'text-status-success' : 'text-status-error'
             )}
           >
-            {metric.change_rate > 0 ? '+' : ''}
+            {Number(metric.change_rate) > 0 ? '+' : ''}
             {metric.change_rate}%
           </span>
         )}

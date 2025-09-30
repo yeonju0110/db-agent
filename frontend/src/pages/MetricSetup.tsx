@@ -1,15 +1,17 @@
 import { ArrowRight, Loader2 } from 'lucide-react'
 
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useNavigate } from 'react-router-dom'
 
+import { dbConnectionsApi } from '@/features/metrics/api'
 import {
   useCreateMetric,
   useExecuteSql,
   useQueryTest,
   useRecommendTables,
 } from '@/features/metrics/hooks'
+import type { DbConnectionItem } from '@/features/metrics/types'
 
 interface FormData {
   natural_query: string
@@ -27,7 +29,8 @@ export function MetricSetup() {
   const [step, setStep] = useState(1)
   // SQL 미리보기 텍스트 유지 (현재 화면에 직접 표시는 queryTest.data를 사용)
   const [selectedTables, setSelectedTables] = useState<string[]>([])
-  const selectedDbConnectionId = 'test-connection'
+  const [dbConnections, setDbConnections] = useState<DbConnectionItem[]>([])
+  const [selectedDbConnectionId, setSelectedDbConnectionId] = useState<string>('')
   const [generatedSql, setGeneratedSql] = useState<string>('')
   const [naturalQuery, setNaturalQuery] = useState<string>('')
   const [queryResult, setQueryResult] = useState<{
@@ -38,24 +41,36 @@ export function MetricSetup() {
   } | null>(null)
 
   // 추천 테이블 상태
-  const [recommendedTables, setRecommendedTables] = useState<
-    Array<{
-      name: string
-      description: string
-      score: number
-      columns_text: string
-      common_queries: string[]
-      recommendation_reason: string
-    }>
-  >([])
+  interface RecommendedTable {
+    name: string
+    description: string
+    score: number
+    columns_text: string
+    common_queries: string[]
+    recommendation_reason: string
+  }
+
+  const [recommendedTables, setRecommendedTables] = useState<RecommendedTable[]>([])
 
   // 알림 설정 상태
-  const [notificationChannels, setNotificationChannels] = useState({
+  interface NotificationChannels {
+    email: boolean
+    slack: boolean
+    webhook: boolean
+  }
+
+  interface NotificationRecipients {
+    'kim-data': boolean
+    'lee-dev': boolean
+    'park-manager': boolean
+  }
+
+  const [notificationChannels, setNotificationChannels] = useState<NotificationChannels>({
     email: false,
     slack: false,
     webhook: false,
   })
-  const [notificationRecipients, setNotificationRecipients] = useState({
+  const [notificationRecipients, setNotificationRecipients] = useState<NotificationRecipients>({
     'kim-data': true,
     'lee-dev': true,
     'park-manager': true,
@@ -67,11 +82,33 @@ export function MetricSetup() {
   const createMetric = useCreateMetric()
   const recommendTables = useRecommendTables()
 
+  // DB 연결 목록 가져오기
+  useEffect(() => {
+    const fetchDbConnections = async () => {
+      try {
+        const result = await dbConnectionsApi.list()
+        setDbConnections(result.items)
+        // 첫 번째 연결을 기본값으로 설정
+        if (result.items.length > 0) {
+          setSelectedDbConnectionId(result.items[0].id)
+        }
+      } catch (error) {
+        console.error('DB 연결 목록 가져오기 실패:', error)
+      }
+    }
+
+    fetchDbConnections()
+  }, [])
+
   // Step 2로 이동할 때는 자동 실행하지 않음 (사용자가 버튼을 눌러야 함)
 
   // 지표 생성 함수
   const handleMetricCreation = useCallback(async () => {
     if (!naturalQuery) return
+    if (!selectedDbConnectionId) {
+      alert('데이터베이스 연결을 선택해주세요.')
+      return
+    }
 
     console.log('지표 생성 시작:', {
       natural_query: naturalQuery,
@@ -143,6 +180,24 @@ export function MetricSetup() {
           <form onSubmit={handleSubmit(onSubmit)}>
             <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
               <h2 className="mb-6 text-2xl font-bold text-gray-900">모니터링 지표 설정</h2>
+
+              {/* DB 연결 선택 */}
+              <div className="mb-6">
+                <label className="mb-2 block text-sm font-medium text-gray-700">
+                  데이터베이스 연결 선택
+                </label>
+                <select
+                  value={selectedDbConnectionId}
+                  onChange={(e) => setSelectedDbConnectionId(e.target.value)}
+                  className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                >
+                  {dbConnections.map((connection) => (
+                    <option key={connection.id} value={connection.id}>
+                      {connection.name} ({connection.db_type})
+                    </option>
+                  ))}
+                </select>
+              </div>
 
               {/* 입력 섹션 */}
               <div className="mb-6">

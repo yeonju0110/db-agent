@@ -73,17 +73,6 @@ export function TableAnomalyDetection({ className = '' }: TableAnomalyDetectionP
     }
   }
 
-  const getSeverityColor = (severity: string) => {
-    switch (severity) {
-      case 'high':
-        return 'text-red-600 bg-red-50 border-red-200'
-      case 'medium':
-        return 'text-yellow-600 bg-yellow-50 border-yellow-200'
-      default:
-        return 'text-green-600 bg-green-50 border-green-200'
-    }
-  }
-
   // 선택된 테이블의 최신 이상치 데이터 찾기
   const latestAnomaly = anomaliesData?.items?.find(
     (anomaly) => anomaly.table_name === selectedTable
