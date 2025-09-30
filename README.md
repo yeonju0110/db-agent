@@ -43,4 +43,7 @@ uv run python backend/core/ai/agent_graph.py
 
 # 13. 카테고리형 쿼리 테스트 (다중 행)
 uv run python backend/core/ai/test_category_query.py
+
+# 14. API 서버 실행
+uv run uvicorn backend.api.v1.main:app --reload --port 8000
 ```
