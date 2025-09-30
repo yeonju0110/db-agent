@@ -5,7 +5,7 @@ import os
 from azure.cosmos import CosmosClient, PartitionKey
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv('.env')
 
 endpoint = os.getenv("COSMOS_ENDPOINT")
 key = os.getenv("COSMOS_KEY")
@@ -34,7 +34,7 @@ containers = [
     ("metrics", "/id"),
     ("histories", "/metric_id"),
     ("anomalies", "/metric_id"),
-    ("connections", "/id")
+    ("db-connections", "/id")
 ]
 
 for container_name, partition_key in containers:
