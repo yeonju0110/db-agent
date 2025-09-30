@@ -22,7 +22,7 @@ export function Header() {
             <Link
               to="/dashboard"
               className={`cursor-pointer px-3 py-2 text-sm font-medium transition-colors ${
-                location.pathname === '/dashboard'
+                location.pathname === '/dashboard' || location.pathname.startsWith('/dashboard')
                   ? 'text-blue-600'
                   : 'text-gray-700 hover:text-blue-600'
               }`}
@@ -32,7 +32,7 @@ export function Header() {
             <Link
               to="/connections"
               className={`cursor-pointer px-3 py-2 text-sm font-medium transition-colors ${
-                location.pathname === '/connections'
+                location.pathname === '/connections' || location.pathname.startsWith('/connections')
                   ? 'text-blue-600'
                   : 'text-gray-700 hover:text-blue-600'
               }`}
@@ -42,7 +42,7 @@ export function Header() {
             <Link
               to="/setup"
               className={`cursor-pointer px-3 py-2 text-sm font-medium transition-colors ${
-                location.pathname === '/setup'
+                location.pathname === '/setup' || location.pathname.startsWith('/setup')
                   ? 'text-blue-600'
                   : 'text-gray-700 hover:text-blue-600'
               }`}

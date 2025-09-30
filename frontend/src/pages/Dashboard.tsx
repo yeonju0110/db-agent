@@ -1,6 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { CategoryChart } from '@/components/ui/CategoryChart'
@@ -22,9 +22,11 @@ export function Dashboard() {
   const { data: dbStatusData } = useDbStatus()
 
   // 첫 번째 지표 자동 선택
-  if (!selectedMetricId && metricsData?.items.length) {
-    setSelectedMetricId(metricsData.items[0].id)
-  }
+  useEffect(() => {
+    if (!selectedMetricId && metricsData?.items.length) {
+      setSelectedMetricId(metricsData.items[0].id)
+    }
+  }, [metricsData, selectedMetricId])
 
   // 새로고침 함수
   const handleRefresh = () => {
@@ -323,7 +325,10 @@ export function Dashboard() {
                 <option value="7d">최근 7일</option>
                 <option value="30d">최근 30일</option>
               </select>
-              <button className="inline-flex cursor-pointer items-center justify-center rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium whitespace-nowrap text-gray-700 transition-colors hover:bg-gray-50 disabled:bg-gray-100">
+              <button
+                onClick={handleRefresh}
+                className="inline-flex cursor-pointer items-center justify-center rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium whitespace-nowrap text-gray-700 transition-colors hover:bg-gray-50 disabled:bg-gray-100"
+              >
                 <i className="ri-refresh-line mr-1"></i>새로고침
               </button>
             </div>

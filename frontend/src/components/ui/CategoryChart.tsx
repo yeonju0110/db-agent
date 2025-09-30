@@ -34,36 +34,32 @@ export function CategoryChart({ data, title, isLoading = false }: CategoryChartP
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [hoveredSlice, setHoveredSlice] = useState<number | null>(null)
 
-  // 최신 데이터 가져오기
-  const latestData = data[0]?.result_data || []
+  // executed_at 타임스탬프 기준으로 최신 데이터 찾기
+  const latestItem = data.reduce(
+    (latest, current) => {
+      if (!latest) return current
+      if (!current) return latest
+
+      const latestTime = new Date(latest.executed_at).getTime()
+      const currentTime = new Date(current.executed_at).getTime()
+
+      return currentTime > latestTime ? current : latest
+    },
+    null as MetricHistory | null
+  )
+
+  const latestData = latestItem?.result_data || []
+
+  const toNumber = (v: unknown) => (typeof v === 'number' ? v : Number(v ?? 0) || 0)
+
+  const pickValue = (o: Record<string, string | number>) =>
+    toNumber(o['count'] ?? o['order_count'] ?? o['total'] ?? o['value'])
+
+  const total = latestData.reduce((sum, d) => sum + pickValue(d), 0)
 
   // 카테고리 데이터 변환
   const categoryData: CategoryData[] = latestData.map((item, index) => {
-    // 다양한 필드명 지원: count, order_count, total, value 등
-    const value =
-      typeof item.count === 'number'
-        ? item.count
-        : typeof item.order_count === 'number'
-          ? item.order_count
-          : typeof item.total === 'number'
-            ? item.total
-            : typeof item.value === 'number'
-              ? item.value
-              : parseInt(String(item.count || item.order_count || item.total || item.value)) || 0
-
-    const total = latestData.reduce((sum, d) => {
-      const count =
-        typeof d.count === 'number'
-          ? d.count
-          : typeof d.order_count === 'number'
-            ? d.order_count
-            : typeof d.total === 'number'
-              ? d.total
-              : typeof d.value === 'number'
-                ? d.value
-                : parseInt(String(d.count || d.order_count || d.total || d.value)) || 0
-      return sum + count
-    }, 0)
+    const value = pickValue(item)
 
     return {
       label: String(item.category || item.status || item.name || `항목 ${index + 1}`),
@@ -74,18 +70,16 @@ export function CategoryChart({ data, title, isLoading = false }: CategoryChartP
     }
   })
 
-  const total = categoryData.reduce((sum, item) => sum + item.value, 0)
-
   // SVG 파이차트 경로 생성
   const generatePieSlices = () => {
-    let cumulativePercentage = 0
+    let cumulativeValue = 0
     const radius = 70
     const centerX = 100
     const centerY = 100
 
     return categoryData.map((item, index) => {
-      const startAngle = (cumulativePercentage / 100) * 360
-      const endAngle = ((cumulativePercentage + item.percentage) / 100) * 360
+      const startAngle = total > 0 ? (cumulativeValue / total) * 360 : 0
+      const endAngle = total > 0 ? ((cumulativeValue + item.value) / total) * 360 : 0
 
       const startAngleRad = (startAngle - 90) * (Math.PI / 180)
       const endAngleRad = (endAngle - 90) * (Math.PI / 180)
@@ -95,7 +89,7 @@ export function CategoryChart({ data, title, isLoading = false }: CategoryChartP
       const x2 = centerX + radius * Math.cos(endAngleRad)
       const y2 = centerY + radius * Math.sin(endAngleRad)
 
-      const largeArc = item.percentage > 50 ? 1 : 0
+      const largeArc = total > 0 && item.value / total > 0.5 ? 1 : 0
 
       const pathData = [
         `M ${centerX} ${centerY}`,
@@ -104,7 +98,7 @@ export function CategoryChart({ data, title, isLoading = false }: CategoryChartP
         'Z',
       ].join(' ')
 
-      cumulativePercentage += item.percentage
+      cumulativeValue += item.value
 
       return {
         ...item,
@@ -162,9 +156,13 @@ export function CategoryChart({ data, title, isLoading = false }: CategoryChartP
           </div>
           <div className="flex items-center space-x-2">
             <span className="text-xs text-gray-500">
-              업데이트: {data[0]?.executed_at ? formatUTCToKST(data[0].executed_at) : '데이터 없음'}
+              업데이트:{' '}
+              {latestItem?.executed_at ? formatUTCToKST(latestItem.executed_at) : '데이터 없음'}
             </span>
-            <button className="inline-flex cursor-pointer items-center justify-center rounded-lg px-3 py-1.5 text-sm font-medium whitespace-nowrap text-gray-700 transition-colors hover:bg-gray-100 disabled:text-gray-400">
+            <button
+              aria-label="데이터 새로고침"
+              className="inline-flex cursor-pointer items-center justify-center rounded-lg px-3 py-1.5 text-sm font-medium whitespace-nowrap text-gray-700 transition-colors hover:bg-gray-100 disabled:text-gray-400"
+            >
               <i className="ri-refresh-line"></i>
             </button>
           </div>
@@ -191,11 +189,14 @@ export function CategoryChart({ data, title, isLoading = false }: CategoryChartP
                   />
                   {/* 메인 슬라이스 */}
                   <path
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`${slice.label} ${slice.percentage}%`}
                     d={slice.path}
                     fill={slice.color}
                     className={`cursor-pointer transition-all duration-300 ${
                       hoveredSlice === index
-                        ? 'scale-1.05 transform opacity-90'
+                        ? 'scale-105 transform opacity-90'
                         : hoveredSlice !== null
                           ? 'opacity-60'
                           : 'opacity-100'
@@ -205,6 +206,12 @@ export function CategoryChart({ data, title, isLoading = false }: CategoryChartP
                     onClick={() =>
                       setSelectedCategory(selectedCategory === slice.label ? null : slice.label)
                     }
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        setSelectedCategory(selectedCategory === slice.label ? null : slice.label)
+                      }
+                    }}
                     style={{
                       filter:
                         hoveredSlice === index ? 'drop-shadow(0 4px 8px rgba(0,0,0,0.15))' : 'none',
@@ -272,9 +279,10 @@ export function CategoryChart({ data, title, isLoading = false }: CategoryChartP
         <div className="flex-1 space-y-3">
           <div className="space-y-1">
             {categoryData.map((item, index) => (
-              <div
+              <button
                 key={index}
-                className={`flex cursor-pointer items-center justify-between rounded-lg p-3 transition-all duration-200 ${
+                type="button"
+                className={`flex w-full cursor-pointer items-center justify-between rounded-lg p-3 text-left transition-all duration-200 ${
                   selectedCategory === item.label
                     ? 'border-2 border-blue-200 bg-blue-50 shadow-sm'
                     : hoveredSlice === index
@@ -316,7 +324,7 @@ export function CategoryChart({ data, title, isLoading = false }: CategoryChartP
                     <i className="ri-arrow-right-s-line text-sm text-blue-600"></i>
                   )}
                 </div>
-              </div>
+              </button>
             ))}
           </div>
 
@@ -400,7 +408,7 @@ export function CategoryChart({ data, title, isLoading = false }: CategoryChartP
                     </div>
                     <div className="rounded border border-blue-100 bg-white p-2 text-center">
                       <div className="text-base font-semibold text-blue-800">
-                        {((selected.value / total) * 100).toFixed(1)}%
+                        {total > 0 ? ((selected.value / total) * 100).toFixed(1) : '0.0'}%
                       </div>
                       <div className="text-xs text-blue-600">전체 대비</div>
                     </div>
@@ -418,7 +426,7 @@ export function CategoryChart({ data, title, isLoading = false }: CategoryChartP
           <span>총 {categoryData.length}개 카테고리</span>
           <span>
             최신 업데이트:{' '}
-            {data[0]?.executed_at ? formatUTCToKST(data[0].executed_at) : '데이터 없음'}
+            {latestItem?.executed_at ? formatUTCToKST(latestItem.executed_at) : '데이터 없음'}
           </span>
         </div>
         <div className="flex items-center space-x-2">

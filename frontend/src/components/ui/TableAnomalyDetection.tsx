@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 import { useMetrics, useScanTableAnomalies, useTableAnomalies } from '@/features/metrics/hooks'
 import { type TableAnomalyDetection } from '@/features/metrics/types'
@@ -31,7 +31,13 @@ export function TableAnomalyDetection({ className = '' }: TableAnomalyDetectionP
     return Array.from(tables).sort()
   }, [metricsData])
 
-  const [selectedTable, setSelectedTable] = useState(() => monitoredTables[0] || 'users')
+  const [selectedTable, setSelectedTable] = useState(() => monitoredTables[0] ?? '')
+
+  useEffect(() => {
+    if (monitoredTables.length > 0 && !monitoredTables.includes(selectedTable)) {
+      setSelectedTable(monitoredTables[0])
+    }
+  }, [monitoredTables, selectedTable])
 
   // 모든 테이블의 이상치 데이터를 가져옴 (테이블 필터 없이)
   const { data: anomaliesData, isLoading } = useTableAnomalies()

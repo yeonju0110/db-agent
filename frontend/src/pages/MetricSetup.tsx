@@ -679,11 +679,10 @@ export function MetricSetup() {
                   console.log('설정 완료 버튼 클릭 - 지표 생성 시작')
                   try {
                     await handleMetricCreation()
-                    setStep(3)
+                    setStep(3) // 성공 시에만 진행
                   } catch (error) {
                     console.error('지표 생성 실패:', error)
-                    // 에러가 발생해도 Step 3으로 이동 (이미 생성되었을 수 있음)
-                    setStep(3)
+                    alert('지표 생성에 실패했습니다. 설정을 확인하고 다시 시도해 주세요.')
                   }
                 }}
                 disabled={createMetric.isPending}

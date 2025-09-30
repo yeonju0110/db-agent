@@ -94,6 +94,14 @@ export function DbConnections() {
     username: string
   }) => {
     setEditingConnection(connection.id)
+    reset({
+      name: connection.name,
+      host: connection.host,
+      port: connection.port,
+      database: connection.database,
+      username: connection.username,
+      password: '',
+    })
     setShowForm(true)
   }
 
@@ -266,14 +274,19 @@ export function DbConnections() {
                       </button>
                       <button
                         onClick={() => handleStartSetup(connection.id)}
-                        disabled={startSetup.isPending}
+                        disabled={
+                          startSetup.isPending || (setupStarted && setupStatus?.status !== 'error')
+                        }
                         className="inline-flex items-center rounded-lg bg-green-600 px-3 py-1.5 text-sm text-white hover:bg-green-700 disabled:opacity-50"
                       >
-                        {startSetup.isPending ? (
+                        {(startSetup.isPending ||
+                          (setupStarted && setupStatus?.status === 'running')) && (
                           <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-                        ) : (
-                          <Play className="mr-1 h-4 w-4" />
                         )}
+                        {!startSetup.isPending &&
+                          !(setupStarted && setupStatus?.status === 'running') && (
+                            <Play className="mr-1 h-4 w-4" />
+                          )}
                         설정 시작
                       </button>
                       <button
@@ -570,10 +583,15 @@ export function DbConnections() {
                   <div className="mt-8 text-center">
                     <button
                       onClick={handleStartSetupFromForm}
-                      disabled={startSetup.isPending}
+                      disabled={
+                        startSetup.isPending || (setupStarted && setupStatus?.status !== 'error')
+                      }
                       className="mx-auto flex items-center rounded-lg bg-blue-600 px-6 py-2 text-white hover:bg-blue-700 disabled:bg-blue-300"
                     >
-                      {startSetup.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      {(startSetup.isPending ||
+                        (setupStarted && setupStatus?.status === 'running')) && (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      )}
                       설정 시작
                     </button>
                   </div>

@@ -202,8 +202,11 @@ export function useAcknowledgeAnomaly() {
 
   return useMutation({
     mutationFn: tableAnomaliesApi.acknowledge,
-    onSuccess: () => {
+    onSuccess: (_, detectionId) => {
       queryClient.invalidateQueries({ queryKey: ['table-anomalies'] })
+      queryClient.invalidateQueries({ queryKey: ['anomalies'] })
+      queryClient.invalidateQueries({ queryKey: ['anomaly-summary'] })
+      queryClient.invalidateQueries({ queryKey: ['anomaly-details', detectionId] })
     },
   })
 }

@@ -123,6 +123,7 @@ export const SchedulerStatus: React.FC<SchedulerStatusProps> = ({ className = ''
           <span className="text-xs">오류: {error}</span>
         </div>
         <button
+          aria-label="상태 새로고침"
           onClick={fetchStatus}
           className="mt-2 rounded bg-red-100 px-2 py-1 text-xs text-red-700 hover:bg-red-200"
         >
