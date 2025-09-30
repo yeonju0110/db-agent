@@ -15,6 +15,9 @@ sys.path.insert(0, str(project_root))
 from backend.scheduler.metric_scheduler import MetricScheduler
 from backend.repositories.monitoring_repository import get_repository
 from backend.models.monitoring import MetricStatus
+from backend.config.settings import get_settings
+
+settings = get_settings()
 
 
 class SchedulerService:
@@ -42,14 +45,17 @@ class SchedulerService:
         self.repository = get_repository()
         
         # 스케줄러 설정
-        self.interval_minutes = 5  # 기본 1시간 간격
+        self.interval_minutes = settings.scheduler_interval_minutes
         self.auto_start = True  # 자동 시작 여부
     
-    async def start(self, interval_minutes: int = 60):
+    async def start(self, interval_minutes: int = None):
         """스케줄러 시작"""
         if self.is_running:
             print("[스케줄러 서비스] 이미 실행 중입니다")
             return
+        
+        if interval_minutes is None:
+            interval_minutes = settings.scheduler_default_interval_minutes
         
         self.interval_minutes = interval_minutes
         self.scheduler = MetricScheduler(interval_minutes=interval_minutes)
@@ -81,7 +87,7 @@ class SchedulerService:
         self.start_time = None
         print("[스케줄러 서비스] 중지됨")
     
-    async def restart(self, interval_minutes: int = 60):
+    async def restart(self, interval_minutes: int = None):
         """스케줄러 재시작"""
         await self.stop()
         await asyncio.sleep(1)  # 잠시 대기
@@ -146,7 +152,7 @@ class SchedulerService:
 scheduler_service = SchedulerService()
 
 
-async def start_scheduler_service(interval_minutes: int = 60):
+async def start_scheduler_service(interval_minutes: int = None):
     """스케줄러 서비스 시작 (애플리케이션 시작 시 호출)"""
     await scheduler_service.start(interval_minutes)
 

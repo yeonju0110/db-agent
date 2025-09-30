@@ -68,7 +68,10 @@ class GraphNodes:
                 "description": t.description,
                 "columns_text": t.columns_text,
                 "common_queries": t.common_queries,
-                "score": t.score
+                "score": t.score,
+                "business_tags": t.business_tags,
+                "relations_text": t.relations_text,
+                "sample_queries_text": t.sample_queries_text
             }
             for t in tables
         ]
@@ -79,6 +82,8 @@ class GraphNodes:
             print(f"    {i}. {table['name']} (점수: {table['score']:.2f})")
             if table['description']:
                 print(f"       설명: {table['description'][:60]}...")
+            if table['business_tags']:
+                print(f"       태그: {', '.join(table['business_tags'])}")
         
         return {"relevant_tables": tables_dict}
     
@@ -97,7 +102,10 @@ class GraphNodes:
                 description=t['description'],
                 columns_text=t['columns_text'],
                 common_queries=t['common_queries'],
-                score=t['score']
+                score=t['score'],
+                business_tags=t.get('business_tags', []),
+                relations_text=t.get('relations_text', ''),
+                sample_queries_text=t.get('sample_queries_text', '')
             )
             for t in state['relevant_tables']
         ]

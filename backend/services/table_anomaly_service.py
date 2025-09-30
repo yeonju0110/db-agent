@@ -12,6 +12,9 @@ sys.path.insert(0, str(project_root))
 
 from backend.repositories.db_connection_repository import get_db_connection_repository
 from backend.repositories.anomaly_repository import get_anomaly_repository
+from backend.config.settings import get_settings
+
+settings = get_settings()
 
 
 class TableAnomalyService:
@@ -163,79 +166,6 @@ class TableAnomalyService:
                 "status_breakdown": {},
                 "table_breakdown": []
             }
-
-    async def _create_sample_data(self, tenant_id: str = "default"):
-        """샘플 이상치 데이터 생성"""
-        try:
-            sample_tables = [
-                {
-                    "table_name": "users",
-                    "total_records": 15420,
-                    "duplicate_count": 0,
-                    "null_count": 2,
-                    "anomaly_count": 3,
-                    "status": "normal"
-                },
-                {
-                    "table_name": "orders", 
-                    "total_records": 8934,
-                    "duplicate_count": 3,
-                    "null_count": 12,
-                    "anomaly_count": 29,
-                    "status": "warning"
-                },
-                {
-                    "table_name": "products",
-                    "total_records": 2341,
-                    "duplicate_count": 0,
-                    "null_count": 45,
-                    "anomaly_count": 55,
-                    "status": "error"
-                },
-                {
-                    "table_name": "logs",
-                    "total_records": 50000,
-                    "duplicate_count": 0,
-                    "null_count": 0,
-                    "anomaly_count": 0,
-                    "status": "normal"
-                }
-            ]
-            
-            for table_data in sample_tables:
-                # 기존 데이터가 있는지 확인
-                query = "SELECT * FROM c WHERE c.type = 'table_anomaly_detection' AND c.table_name = @table_name"
-                parameters = [{"name": "@table_name", "value": table_data["table_name"]}]
-                
-                existing_items = list(self.db_repository.container.query_items(
-                    query=query,
-                    parameters=parameters,
-                    enable_cross_partition_query=True
-                ))
-                
-                # 기존 데이터가 없으면 생성
-                if not existing_items:
-                    sample_item = {
-                        "id": str(uuid.uuid4()),
-                        "type": "table_anomaly_detection",
-                        "tenant_id": tenant_id,
-                        "table_name": table_data["table_name"],
-                        "detected_at": datetime.utcnow().isoformat(),
-                        "total_records": table_data["total_records"],
-                        "duplicate_count": table_data["duplicate_count"],
-                        "null_count": table_data["null_count"],
-                        "anomaly_count": table_data["anomaly_count"],
-                        "status": table_data["status"],
-                        "is_acknowledged": False,
-                        "created_at": datetime.utcnow().isoformat(),
-                        "updated_at": datetime.utcnow().isoformat()
-                    }
-                    
-                    self.db_repository.container.create_item(sample_item)
-                    print(f"Created sample data for table: {table_data['table_name']}")
-                    
-        except Exception as e:
-            print(f"Error creating sample data: {e}")
 
     async def delete_anomaly_detection(self, detection_id: str, tenant_id: str = "default") -> bool:
         """특정 이상치 검사 결과 삭제"""

@@ -16,12 +16,17 @@ from backend.models.monitoring import MetricStatus, MonitoringMetric
 from backend.core.ai.agent_graph import create_agent_graph
 from backend.core.ai.sql_executor import SQLExecutor
 from backend.services.table_anomaly_service import TableAnomalyService
+from backend.config.settings import get_settings
+
+settings = get_settings()
 
 
 class MetricScheduler:
     """지표 스케줄러 (SQL 캐싱 지원)"""
     
-    def __init__(self, interval_minutes: int = 5):
+    def __init__(self, interval_minutes: int = None):
+        if interval_minutes is None:
+            interval_minutes = settings.scheduler_default_interval_minutes
         self.interval_minutes = interval_minutes
         self.repository = get_repository()
         self.graph = create_agent_graph()
@@ -234,7 +239,7 @@ class MetricScheduler:
 
 
 async def main():
-    scheduler = MetricScheduler(interval_minutes=60)
+    scheduler = MetricScheduler()
     try:
         await scheduler.start()
     except KeyboardInterrupt:
