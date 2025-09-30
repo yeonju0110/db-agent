@@ -21,15 +21,35 @@ class TableInfo:
     columns_text: str
     common_queries: List[str]
     score: float
+    business_tags: List[str] = None
+    relations_text: str = ""
+    sample_queries_text: str = ""
+    
+    def __post_init__(self):
+        """초기화 후 처리"""
+        if self.business_tags is None:
+            self.business_tags = []
     
     def to_context_string(self) -> str:
         """프롬프트용 컨텍스트 문자열 생성"""
-        return f"""
+        context = f"""
 테이블: {self.name}
 설명: {self.description}
-컬럼: {self.columns_text}
-자주 사용하는 쿼리: {', '.join(self.common_queries) if self.common_queries else '없음'}
-""".strip()
+컬럼: {self.columns_text}"""
+        
+        if self.business_tags:
+            context += f"\n비즈니스 태그: {', '.join(self.business_tags)}"
+        
+        if self.common_queries:
+            context += f"\n자주 사용하는 쿼리: {', '.join(self.common_queries)}"
+        
+        if self.sample_queries_text:
+            context += f"\n예시 쿼리: {self.sample_queries_text}"
+        
+        if self.relations_text:
+            context += f"\n관계 정보: {self.relations_text}"
+            
+        return context.strip()
 
 
 class SchemaRetriever:
@@ -96,7 +116,7 @@ class SchemaRetriever:
         top_k: int = 3
     ) -> List[TableInfo]:
         """
-        자연어 쿼리로 관련 테이블 검색 (텍스트 검색)
+        자연어 쿼리로 관련 테이블 검색 (하이브리드 검색)
         
         Args:
             query: 한국어 자연어 쿼리 (예: "오늘 주문 건수")
@@ -105,13 +125,57 @@ class SchemaRetriever:
         Returns:
             검색된 테이블 정보 리스트 (유사도 높은 순)
         """
-        # 텍스트 검색 사용 (벡터 검색 비활성화)
-        return self._fallback_text_search(query, top_k)
+        # 먼저 텍스트 검색 시도
+        text_results = self._fallback_text_search(query, top_k)
+        
+        # 결과가 없으면 바로 반환
+        if not text_results:
+            return text_results
+        
+        # 점수가 너무 낮으면 쿼리 개선 시도
+        if text_results[0].score < 0.5:
+            print(f"  ⚠ 낮은 검색 점수 감지 (최고: {text_results[0].score:.2f}), 쿼리 개선 시도...")
+            improved_query = self._improve_query_for_search(query)
+            if improved_query != query:
+                print(f"  → 개선된 쿼리: {improved_query}")
+                improved_results = self._fallback_text_search(improved_query, top_k)
+                if improved_results and len(improved_results) > 0 and improved_results[0].score > text_results[0].score:
+                    return improved_results
+        
+        return text_results
+    
+    def _improve_query_for_search(self, query: str) -> str:
+        """검색을 위한 쿼리 개선"""
+        # 한국어 비즈니스 용어 매핑
+        term_mapping = {
+            "주문": "orders",
+            "결제": "payments", 
+            "사용자": "users",
+            "회원": "users",
+            "상품": "products",
+            "카테고리": "categories",
+            "리뷰": "reviews",
+            "재고": "inventory",
+            "배송": "shipping",
+            "주소": "addresses",
+            "건수": "count",
+            "수량": "quantity",
+            "금액": "amount",
+            "매출": "revenue",
+            "매출액": "revenue"
+        }
+        
+        improved_query = query
+        for korean_term, english_term in term_mapping.items():
+            if korean_term in query:
+                improved_query += f" {english_term}"
+        
+        return improved_query
     
     def get_recommended_tables(
         self, 
         query: str, 
-        min_score: float = 1.0,
+        min_score: float = 0.3,
         max_tables: int = 5
     ) -> List[TableInfo]:
         """
@@ -144,7 +208,8 @@ class SchemaRetriever:
         try:
             results = self.search_client.search(
                 search_text=query,
-                select=["display_name", "description", "columns_text", "business_tags", "content"],
+                select=["display_name", "description", "columns_text", "business_tags", "content", 
+                       "relations_text", "sample_queries_text"],
                 top=top_k
             )
             
@@ -163,7 +228,10 @@ class SchemaRetriever:
                     description=result.get("description", ""),
                     columns_text=result.get("columns_text", ""),
                     common_queries=common_queries,
-                    score=result.get("@search.score", 0.0)
+                    score=result.get("@search.score", 0.0),
+                    business_tags=result.get("business_tags", []),
+                    relations_text=result.get("relations_text", ""),
+                    sample_queries_text=result.get("sample_queries_text", "")
                 )
                 tables.append(table)
             

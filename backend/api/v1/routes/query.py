@@ -135,8 +135,8 @@ async def execute_sql(
             result_type=result_type,
             result_value=result_value,
             result_data=result_data,
-            execution_time_ms=0,  # TODO: 실제 실행 시간 측정
-            tables_used=[]  # TODO: 사용된 테이블 추출
+            execution_time_ms=result.get('execution_time_ms', 0),
+            tables_used=[]  # 직접 실행에서는 테이블 정보 없음
         )
         
     except HTTPException:
@@ -159,7 +159,7 @@ async def recommend_tables(
         retriever = SchemaRetriever()
         recommended_tables = retriever.get_recommended_tables(
             query=request.question,
-            min_score=1.0,  # 최소 점수 임계값
+            min_score=0.3,  # 최소 점수 임계값
             max_tables=5    # 최대 추천 개수
         )
         
@@ -187,11 +187,11 @@ async def recommend_tables(
 
 def _get_recommendation_reason(score: float) -> str:
     """점수 기반 추천 이유 생성"""
-    if score >= 2.0:
+    if score >= 0.8:
         return "매우 관련성 높음 - 핵심 테이블"
-    elif score >= 1.5:
+    elif score >= 0.6:
         return "관련성 높음 - 주요 테이블"
-    elif score >= 1.0:
+    elif score >= 0.4:
         return "관련성 보통 - 참고 테이블"
     else:
         return "관련성 낮음 - 선택적 테이블"

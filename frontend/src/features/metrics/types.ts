@@ -142,11 +142,26 @@ export interface TableAnomalyDetection {
   total_records: number
   duplicate_count: number
   null_count: number
+  distribution_anomaly_count: number
   anomaly_count: number
-  status: 'normal' | 'warning' | 'error'
+  status: 'normal' | 'info' | 'warning' | 'error'
   is_acknowledged: boolean
   created_at: string
   updated_at: string
+  anomaly_details?: AnomalyDetail[] // 상세 정보 추가
+}
+
+export interface AnomalyDetail {
+  type: 'null_values' | 'duplicates' | 'distribution_anomaly'
+  column?: string
+  data_type?: string
+  is_nullable?: boolean
+  value?: string
+  count: number
+  percentage?: number
+  severity: 'low' | 'medium' | 'high'
+  description: string
+  sample_data?: Record<string, unknown>[]
 }
 
 export interface TableAnomalyDetail {

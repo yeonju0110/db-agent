@@ -180,4 +180,36 @@ CREATE TABLE reviews (
     FOREIGN KEY (order_id) REFERENCES orders(id)
 );
 
+ALTER TABLE orders ALTER COLUMN payment_method DROP NOT NULL;
+ALTER TABLE payments ALTER COLUMN payment_method DROP NOT NULL;
 
+-- monitoring_user에게 모든 테이블 및 시퀀스에 대한 권한 부여
+-- Azure PostgreSQL에서 안전한 명시적 권한 부여 방식
+DO $$
+BEGIN
+    -- monitoring_user가 존재하는지 확인
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'monitoring_user') THEN
+        -- 각 테이블별로 명시적 권한 부여 (Azure PostgreSQL 호환)
+        GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE users TO monitoring_user;
+        GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE user_addresses TO monitoring_user;
+        GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE categories TO monitoring_user;
+        GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE products TO monitoring_user;
+        GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE inventory TO monitoring_user;
+        GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE orders TO monitoring_user;
+        GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE order_items TO monitoring_user;
+        GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE payments TO monitoring_user;
+        GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE user_activities TO monitoring_user;
+        GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE reviews TO monitoring_user;
+        
+        -- 모든 시퀀스에 대한 권한 부여 (IDENTITY 컬럼용)
+        GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO monitoring_user;
+        
+        -- 새로 생성되는 테이블에 대한 기본 권한 설정
+        ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO monitoring_user;
+        ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO monitoring_user;
+        
+        RAISE NOTICE 'monitoring_user에게 모든 테이블 권한이 부여되었습니다.';
+    ELSE
+        RAISE NOTICE 'monitoring_user가 존재하지 않습니다. 권한 부여를 건너뜁니다.';
+    END IF;
+END$$;

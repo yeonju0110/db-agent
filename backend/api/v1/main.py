@@ -15,14 +15,17 @@ project_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 from backend.services.scheduler_service import start_scheduler_service, stop_scheduler_service
+from backend.config.settings import get_settings
+
+settings = get_settings()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """애플리케이션 생명주기 관리"""
-    # 시작 시 스케줄러 서비스 시작 (5분 간격으로 변경)
+    # 시작 시 스케줄러 서비스 시작 (환경변수에서 간격 설정)
     print("🚀 애플리케이션 시작 - 스케줄러 서비스 시작")
-    await start_scheduler_service(interval_minutes=5)
+    await start_scheduler_service()
     
     yield
     

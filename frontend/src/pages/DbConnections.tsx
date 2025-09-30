@@ -1,15 +1,4 @@
-import {
-  CheckCircle,
-  Clock,
-  Database,
-  Edit,
-  Loader2,
-  Play,
-  Plus,
-  TestTube,
-  Trash2,
-  XCircle,
-} from 'lucide-react'
+import { CheckCircle, Clock, Database, Loader2, Play, Plus, Trash2, XCircle } from 'lucide-react'
 
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
@@ -85,26 +74,6 @@ export function DbConnections() {
     }
   }
 
-  const handleEdit = (connection: {
-    id: string
-    name: string
-    host: string
-    port: number
-    database: string
-    username: string
-  }) => {
-    setEditingConnection(connection.id)
-    reset({
-      name: connection.name,
-      host: connection.host,
-      port: connection.port,
-      database: connection.database,
-      username: connection.username,
-      password: '',
-    })
-    setShowForm(true)
-  }
-
   const handleDelete = async (connectionId: string) => {
     if (confirm('정말로 이 연결을 삭제하시겠습니까?')) {
       try {
@@ -112,14 +81,6 @@ export function DbConnections() {
       } catch (error) {
         console.error('연결 삭제 실패:', error)
       }
-    }
-  }
-
-  const handleTest = async (connectionId: string) => {
-    try {
-      await testConnection.mutateAsync(connectionId)
-    } catch (error) {
-      console.error('연결 테스트 실패:', error)
     }
   }
 
@@ -180,7 +141,7 @@ export function DbConnections() {
   }
 
   return (
-    <div className="min-h-screen w-full flex-1 bg-gray-50">
+    <div className="max-content min-h-screen w-full flex-1 bg-gray-50">
       <div className="mx-auto max-w-4xl px-4 py-8">
         {/* 헤더 */}
         <div className="mb-8">
@@ -261,23 +222,11 @@ export function DbConnections() {
                     </div>
                     <div className="flex items-center space-x-2">
                       <button
-                        onClick={() => handleTest(connection.id)}
-                        disabled={testConnection.isPending}
-                        className="inline-flex items-center rounded-lg bg-gray-100 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-200 disabled:opacity-50"
-                      >
-                        {testConnection.isPending ? (
-                          <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-                        ) : (
-                          <TestTube className="mr-1 h-4 w-4" />
-                        )}
-                        테스트
-                      </button>
-                      <button
                         onClick={() => handleStartSetup(connection.id)}
                         disabled={
                           startSetup.isPending || (setupStarted && setupStatus?.status !== 'error')
                         }
-                        className="inline-flex items-center rounded-lg bg-green-600 px-3 py-1.5 text-sm text-white hover:bg-green-700 disabled:opacity-50"
+                        className="inline-flex items-center rounded-lg bg-green-100 px-3 py-1.5 text-sm text-green-800 hover:bg-green-200 disabled:opacity-50"
                       >
                         {(startSetup.isPending ||
                           (setupStarted && setupStatus?.status === 'running')) && (
@@ -290,15 +239,8 @@ export function DbConnections() {
                         설정 시작
                       </button>
                       <button
-                        onClick={() => handleEdit(connection)}
-                        className="inline-flex items-center rounded-lg bg-gray-100 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-200"
-                      >
-                        <Edit className="mr-1 h-4 w-4" />
-                        수정
-                      </button>
-                      <button
                         onClick={() => handleDelete(connection.id)}
-                        className="inline-flex items-center rounded-lg bg-red-100 px-3 py-1.5 text-sm text-red-700 hover:bg-red-200"
+                        className="inline-flex items-center rounded-lg bg-red-50 px-3 py-1.5 text-sm text-red-700 hover:bg-red-100"
                       >
                         <Trash2 className="mr-1 h-4 w-4" />
                         삭제

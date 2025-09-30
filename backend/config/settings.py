@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     # Cosmos DB 설정
     cosmos_endpoint: Optional[str] = None
     cosmos_key: Optional[SecretStr] = None
-    cosmos_database: str = "db-monitoring"
+    cosmos_database: str
     
     # DB 연결 암호화 키
     db_connection_encryption_key: Optional[SecretStr] = None
@@ -45,6 +45,14 @@ class Settings(BaseSettings):
     
     # 임베딩 설정
     embedding_dim: int = 3072
+    
+    # 스케줄러 설정
+    scheduler_interval_minutes: int = 60
+    scheduler_default_interval_minutes: int = 60
+    
+    # 테넌트 설정
+    default_tenant_id: str = "default"
+    default_tenant_name: str = "default_tenant"
     
     # pydantic-settings v2 구성
     model_config = SettingsConfigDict(
