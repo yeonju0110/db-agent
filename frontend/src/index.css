@@ -1,0 +1,35 @@
+@import 'tailwindcss';
+
+@layer base {
+  :root {
+    --primary: #2563eb;
+    --primary-light: #eff6ff;
+    --primary-dark: #1e40af;
+
+    --status-success: #10b981;
+    --status-warning: #f59e0b;
+    --status-error: #ef4444;
+  }
+
+  body {
+    background-color: #ffffff;
+    color: #111827;
+  }
+}
+
+/* 파란색이 제대로 보이도록 명시적으로 정의 */
+.bg-primary {
+  background-color: #2563eb !important;
+}
+
+.text-primary {
+  color: #2563eb !important;
+}
+
+.bg-primary-dark {
+  background-color: #1e40af !important;
+}
+
+.hover\:bg-primary-dark:hover {
+  background-color: #1e40af !important;
+}
